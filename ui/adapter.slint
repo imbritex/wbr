@@ -1,0 +1,39 @@
+export struct EngineCardData {
+    id: string,
+    name: string,
+    version: string,
+    installed: bool,
+    playtime_label: string,
+}
+
+export struct ModCardData {
+    id: string,
+    title: string,
+    author: string,
+    engine: string,
+}
+
+export struct NewsItemData {
+    title: string,
+    source: string,
+    summary: string,
+}
+
+export enum AppTab {
+    home,
+    library,
+    instances,
+    news,
+}
+
+export global MainWindowAdapter {
+    in_out property <AppTab> active_tab: AppTab.home;
+    in_out property <string> library_path: "";
+    in_out property <string> status_message: "Iniciando...";
+    in_out property <[EngineCardData]> engines: [];
+    in_out property <[ModCardData]> mods: [];
+    in_out property <[NewsItemData]> news: [];
+
+    callback refresh_requested();
+    callback search_mods(query: string);
+}

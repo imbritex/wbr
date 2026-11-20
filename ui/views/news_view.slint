@@ -1,0 +1,50 @@
+import {
+    ElevatedCard,
+    MaterialPalette,
+    MaterialStyleMetrics,
+    MaterialText,
+    Typography,
+} from "@material";
+import { MainWindowAdapter } from "../adapter.slint";
+
+export component NewsView inherits Rectangle {
+    background: MaterialPalette.background;
+
+    VerticalLayout {
+        padding: MaterialStyleMetrics.padding_24;
+        spacing: MaterialStyleMetrics.spacing_16;
+        alignment: start;
+
+        MaterialText {
+            text: "Noticias y Lanzamientos";
+            style: Typography.headline_small;
+            color: MaterialPalette.on_background;
+        }
+
+        for item in MainWindowAdapter.news : ElevatedCard {
+            VerticalLayout {
+                padding: MaterialStyleMetrics.padding_16;
+                spacing: MaterialStyleMetrics.spacing_8;
+
+                MaterialText {
+                    text: item.title;
+                    style: Typography.title_medium;
+                    color: MaterialPalette.on_surface;
+                }
+
+                MaterialText {
+                    text: item.source;
+                    style: Typography.label_medium;
+                    color: MaterialPalette.primary;
+                }
+
+                MaterialText {
+                    text: item.summary;
+                    style: Typography.body_medium;
+                    color: MaterialPalette.on_surface_variant;
+                    wrap: word_wrap;
+                }
+            }
+        }
+    }
+}

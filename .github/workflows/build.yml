@@ -1,0 +1,110 @@
+name: Build wb-r
+
+on:
+  push:
+    branches: [main, master, dev]
+    paths-ignore:
+      - "scripts/**"
+      - "**/*.md"
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Cargo build profile"
+        required: true
+        default: "debug"
+        type: choice
+        options:
+          - debug
+          - release
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows
+            os: windows-latest
+            artifact: wbr-windows
+          - platform: linux
+            os: ubuntu-latest
+            artifact: wbr-linux
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libfontconfig1-dev \
+            libfreetype-dev \
+            libgl1-mesa-dev \
+            libwayland-dev \
+            libxkbcommon-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxrandr-dev \
+            libxi-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo dependencies and target
+        uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: "true"
+
+      - name: Build wb-r (debug)
+        if: ${{ inputs.profile != 'release' }}
+        run: cargo build
+
+      - name: Build wb-r (release)
+        if: ${{ inputs.profile == 'release' }}
+        run: cargo build --release
+
+      - name: Stage binary artifact (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $profileDir = if ("${{ inputs.profile }}" -eq "release") { "release" } else { "debug" }
+          Copy-Item "target/$profileDir/wb-r.exe" "dist/wb-r.exe"
+          if (Test-Path "target/$profileDir/wb-r.pdb") {
+            Copy-Item "target/$profileDir/wb-r.pdb" "dist/wb-r.pdb"
+          }
+
+      - name: Stage binary artifact (Linux)
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          mkdir -p dist
+          if [ "${{ inputs.profile }}" = "release" ]; then
+            PROFILE_DIR="release"
+          else
+            PROFILE_DIR="debug"
+          fi
+          cp "target/$PROFILE_DIR/wb-r" "dist/wb-r"
+          chmod +x "dist/wb-r"
+
+      - name: Upload ${{ matrix.artifact }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/
+          retention-days: 7

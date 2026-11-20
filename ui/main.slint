@@ -1,0 +1,149 @@
+import { Palette } from "std-widgets.slint";
+import {
+    MaterialPalette,
+    MaterialWindow,
+    NavigationBar,
+    NavigationItem,
+    NavigationRail,
+    SmallAppBar,
+} from "@material";
+import { AppTab, MainWindowAdapter } from "./adapter.slint";
+import { FilledIcons, OutlinedIcons } from "./icons.slint";
+import { HomeView } from "./views/home_view.slint";
+import { LibraryView } from "./views/library_view.slint";
+import { InstancesView } from "./views/instances_view.slint";
+import { NewsView } from "./views/news_view.slint";
+
+export { MainWindowAdapter }
+
+export component MainWindow inherits MaterialWindow {
+    title: "WeekBox (wb-r)";
+    preferred-width: 1080px;
+    preferred-height: 700px;
+    min-width: 420px;
+    min-height: 500px;
+    background: MaterialPalette.background;
+
+    property <bool> compact_layout: root.width < 760px;
+
+    property <[NavigationItem]> nav_items: [
+        {
+            text: "Inicio",
+            icon: OutlinedIcons.dashboard,
+            selected_icon: FilledIcons.dashboard,
+        },
+        {
+            text: "Biblioteca",
+            icon: OutlinedIcons.explore,
+            selected_icon: FilledIcons.explore,
+        },
+        {
+            text: "Instancias",
+            icon: OutlinedIcons.archive,
+            selected_icon: FilledIcons.archive,
+        },
+        {
+            text: "Noticias",
+            icon: OutlinedIcons.inbox,
+            selected_icon: FilledIcons.inbox,
+        },
+    ];
+
+    function set_tab_by_index(idx: int) {
+        if idx == 0 {
+            MainWindowAdapter.active_tab = AppTab.home;
+        } else if idx == 1 {
+            MainWindowAdapter.active_tab = AppTab.library;
+        } else if idx == 2 {
+            MainWindowAdapter.active_tab = AppTab.instances;
+        } else if idx == 3 {
+            MainWindowAdapter.active_tab = AppTab.news;
+        }
+    }
+
+    VerticalLayout {
+        SmallAppBar {
+            title: "WeekBox · Rust + Material 3";
+            trailing_buttons: [
+                {
+                    icon: Palette.color_scheme == ColorScheme.light
+                        ? OutlinedIcons.dark_mode
+                        : OutlinedIcons.light_mode,
+                    enabled: true,
+                }
+            ];
+
+            trailing_button_clicked(index) => {
+                if index == 0 {
+                    if Palette.color_scheme == ColorScheme.light {
+                        Palette.color_scheme = ColorScheme.dark;
+                    } else {
+                        Palette.color_scheme = ColorScheme.light;
+                    }
+                }
+            }
+        }
+
+        if !root.compact_layout : HorizontalLayout {
+            vertical-stretch: 1;
+
+            NavigationRail {
+                items: root.nav_items;
+                selected(index) => {
+                    root.set_tab_by_index(index);
+                }
+            }
+
+            Rectangle {
+                horizontal-stretch: 1;
+                if MainWindowAdapter.active_tab == AppTab.home : HomeView {
+                    width: 100%;
+                    height: 100%;
+                }
+                if MainWindowAdapter.active_tab == AppTab.library : LibraryView {
+                    width: 100%;
+                    height: 100%;
+                }
+                if MainWindowAdapter.active_tab == AppTab.instances : InstancesView {
+                    width: 100%;
+                    height: 100%;
+                }
+                if MainWindowAdapter.active_tab == AppTab.news : NewsView {
+                    width: 100%;
+                    height: 100%;
+                }
+            }
+        }
+
+        if root.compact_layout : VerticalLayout {
+            vertical-stretch: 1;
+
+            Rectangle {
+                vertical-stretch: 1;
+                if MainWindowAdapter.active_tab == AppTab.home : HomeView {
+                    width: 100%;
+                    height: 100%;
+                }
+                if MainWindowAdapter.active_tab == AppTab.library : LibraryView {
+                    width: 100%;
+                    height: 100%;
+                }
+                if MainWindowAdapter.active_tab == AppTab.instances : InstancesView {
+                    width: 100%;
+                    height: 100%;
+                }
+                if MainWindowAdapter.active_tab == AppTab.news : NewsView {
+                    width: 100%;
+                    height: 100%;
+                }
+            }
+
+            NavigationBar {
+                items: root.nav_items;
+                selected(index) => {
+                    root.set_tab_by_index(index);
+                }
+            }
+        }
+    }
+}

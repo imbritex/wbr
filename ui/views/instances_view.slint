@@ -1,0 +1,66 @@
+import {
+    ElevatedCard,
+    FilledButton,
+    MaterialPalette,
+    MaterialStyleMetrics,
+    MaterialText,
+    TonalButton,
+    Typography,
+} from "@material";
+import { MainWindowAdapter } from "../adapter.slint";
+
+export component InstancesView inherits Rectangle {
+    background: MaterialPalette.background;
+
+    VerticalLayout {
+        padding: MaterialStyleMetrics.padding_24;
+        spacing: MaterialStyleMetrics.spacing_16;
+        alignment: start;
+
+        HorizontalLayout {
+            alignment: space_between;
+
+            MaterialText {
+                text: "Instancias y Engines";
+                style: Typography.headline_small;
+                color: MaterialPalette.on_background;
+            }
+
+            TonalButton {
+                text: "Detectar activos";
+                clicked => {
+                    MainWindowAdapter.refresh_requested();
+                }
+            }
+        }
+
+        for engine in MainWindowAdapter.engines : ElevatedCard {
+            HorizontalLayout {
+                padding: MaterialStyleMetrics.padding_16;
+                spacing: MaterialStyleMetrics.spacing_12;
+                alignment: space_between;
+
+                VerticalLayout {
+                    spacing: MaterialStyleMetrics.spacing_4;
+                    MaterialText {
+                        text: engine.name + " (" + engine.version + ")";
+                        style: Typography.title_medium;
+                        color: MaterialPalette.on_surface;
+                    }
+                    MaterialText {
+                        text: (engine.installed ? "Instalado" : "No instalado") + " · Playtime: " + engine.playtime_label;
+                        style: Typography.body_medium;
+                        color: MaterialPalette.on_surface_variant;
+                    }
+                }
+
+                FilledButton {
+                    text: engine.installed ? "Lanzar" : "Instalar";
+                    clicked => {
+                        MainWindowAdapter.refresh_requested();
+                    }
+                }
+            }
+        }
+    }
+}

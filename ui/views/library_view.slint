@@ -1,0 +1,55 @@
+import {
+    ElevatedCard,
+    MaterialPalette,
+    MaterialStyleMetrics,
+    MaterialText,
+    SearchBar,
+    Typography,
+} from "@material";
+import { MainWindowAdapter } from "../adapter.slint";
+import { OutlinedIcons } from "../icons.slint";
+
+export component LibraryView inherits Rectangle {
+    background: MaterialPalette.background;
+
+    VerticalLayout {
+        padding: MaterialStyleMetrics.padding_24;
+        spacing: MaterialStyleMetrics.spacing_16;
+        alignment: start;
+
+        MaterialText {
+            text: "Biblioteca y Mods";
+            style: Typography.headline_small;
+            color: MaterialPalette.on_background;
+        }
+
+        SearchBar {
+            leading_icon: OutlinedIcons.search;
+            placeholder_text: "Buscar mods en GameBanana o local...";
+            empty_text: "Sin búsquedas recientes.";
+
+            edited(text) => {
+                MainWindowAdapter.search_mods(text);
+            }
+        }
+
+        for mod_item in MainWindowAdapter.mods : ElevatedCard {
+            VerticalLayout {
+                padding: MaterialStyleMetrics.padding_16;
+                spacing: MaterialStyleMetrics.spacing_4;
+
+                MaterialText {
+                    text: mod_item.title;
+                    style: Typography.title_medium;
+                    color: MaterialPalette.on_surface;
+                }
+
+                MaterialText {
+                    text: mod_item.author + " · " + mod_item.engine;
+                    style: Typography.body_medium;
+                    color: MaterialPalette.on_surface_variant;
+                }
+            }
+        }
+    }
+}
