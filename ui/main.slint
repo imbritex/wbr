@@ -89,7 +89,7 @@ export component MainWindow inherits MaterialWindow {
 
             NavigationRail {
                 items: root.nav_items;
-                selected(index) => {
+                index_changed(index) => {
                     root.set_tab_by_index(index);
                 }
             }
@@ -140,7 +140,7 @@ export component MainWindow inherits MaterialWindow {
 
             NavigationBar {
                 items: root.nav_items;
-                selected(index) => {
+                index_changed(index) => {
                     root.set_tab_by_index(index);
                 }
             }
