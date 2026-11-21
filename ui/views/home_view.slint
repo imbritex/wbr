@@ -77,11 +77,8 @@ export component HomeView inherits Rectangle {
                 height: self.rows > 0 ? self.rows * self.card_height + (self.rows - 1) * self.gap : 0px;
 
                 for mod_item[idx] in MainWindowAdapter.home_mods : ModGridCard {
-                    property <int> col: mod(idx, grid_container.cols);
-                    property <int> row: floor(idx / grid_container.cols);
-
-                    x: self.col * (grid_container.card_width + grid_container.gap);
-                    y: self.row * (grid_container.card_height + grid_container.gap);
+                    x: mod(idx, grid_container.cols) * (grid_container.card_width + grid_container.gap);
+                    y: floor(idx / grid_container.cols) * (grid_container.card_height + grid_container.gap);
                     width: grid_container.card_width;
                     height: grid_container.card_height;
                     item: mod_item;
