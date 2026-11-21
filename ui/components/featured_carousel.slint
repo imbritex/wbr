@@ -299,34 +299,41 @@ export component FeaturedCarousel {
 
                 HorizontalLayout {
                     alignment: center;
-                    spacing: 6px;
+                    spacing: 0px;
 
-                    for item[idx] in root.items : if root.active_badge == "" || item.badge == root.active_badge : VerticalLayout {
-                        alignment: center;
+                    for item[idx] in root.items : HorizontalLayout {
+                        if root.active_badge == "" || item.badge == root.active_badge : HorizontalLayout {
+                            padding_left: 3px;
+                            padding_right: 3px;
 
-                        Rectangle {
-                            width: idx == root.active_index ? 44px : 10px;
-                            height: 10px;
-                            border_radius: 5px;
-                            background: MaterialPalette.surface_container_highest;
-                            border_width: 1px;
-                            border_color: MaterialPalette.outline_variant;
-                            clip: true;
+                            VerticalLayout {
+                                alignment: center;
 
-                            animate width { duration: 300ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                                Rectangle {
+                                    width: idx == root.active_index ? 44px : 10px;
+                                    height: 10px;
+                                    border_radius: 5px;
+                                    background: MaterialPalette.surface_container_highest;
+                                    border_width: 1px;
+                                    border_color: MaterialPalette.outline_variant;
+                                    clip: true;
 
-                            if idx == root.active_index : Rectangle {
-                                x: 0px;
-                                y: 0px;
-                                width: parent.width * root.auto_progress;
-                                height: 100%;
-                                border_radius: 5px;
-                                background: MaterialPalette.primary;
-                            }
+                                    animate width { duration: 300ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-                            TouchArea {
-                                clicked => {
-                                    root.go_to(idx);
+                                    if idx == root.active_index : Rectangle {
+                                        x: 0px;
+                                        y: 0px;
+                                        width: parent.width * root.auto_progress;
+                                        height: 100%;
+                                        border_radius: 5px;
+                                        background: MaterialPalette.primary;
+                                    }
+
+                                    TouchArea {
+                                        clicked => {
+                                            root.go_to(idx);
+                                        }
+                                    }
                                 }
                             }
                         }
