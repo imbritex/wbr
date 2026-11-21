@@ -729,6 +729,7 @@ fn bind_mod_details_callbacks(window: &MainWindow, state: &AppState) {
     adapter.on_play_mod(move |mod_id| {
         let id_s = mod_id.to_string();
         let st = state_c.clone();
+        let st_callout = state_c.clone();
         let wk = weak.clone();
         state_c.runtime.clone().spawn(async move {
             let res = tokio::task::spawn_blocking(move || {
@@ -738,13 +739,13 @@ fn bind_mod_details_callbacks(window: &MainWindow, state: &AppState) {
 
             match res {
                 Ok(Ok(_pid)) => {
-                    show_callout(wk, &state_c, "Launching Mod", "Game process started.", "success");
+                    show_callout(wk, &st_callout, "Launching Mod", "Game process started.", "success");
                 }
                 Ok(Err(err)) => {
-                    show_callout(wk, &state_c, "Launch Error", &err.to_string(), "error");
+                    show_callout(wk, &st_callout, "Launch Error", &err.to_string(), "error");
                 }
                 Err(err) => {
-                    show_callout(wk, &state_c, "Launch Error", &err.to_string(), "error");
+                    show_callout(wk, &st_callout, "Launch Error", &err.to_string(), "error");
                 }
             }
         });
@@ -1379,6 +1380,7 @@ fn bind_library_callbacks(window: &MainWindow, state: &AppState) {
             return;
         }
         let st = state_c.clone();
+        let st_callout = state_c.clone();
         let wk = weak.clone();
         state_c.runtime.clone().spawn(async move {
             let res = tokio::task::spawn_blocking(move || -> anyhow::Result<u32> {
@@ -1411,13 +1413,13 @@ fn bind_library_callbacks(window: &MainWindow, state: &AppState) {
 
             match res {
                 Ok(Ok(_)) => {
-                    show_callout(wk, &state_c, "Launching Profile", "Engine launched with profile mods.", "success");
+                    show_callout(wk, &st_callout, "Launching Profile", "Engine launched with profile mods.", "success");
                 }
                 Ok(Err(err)) => {
-                    show_callout(wk, &state_c, "Profile Launch Error", &err.to_string(), "error");
+                    show_callout(wk, &st_callout, "Profile Launch Error", &err.to_string(), "error");
                 }
                 Err(err) => {
-                    show_callout(wk, &state_c, "Profile Launch Error", &err.to_string(), "error");
+                    show_callout(wk, &st_callout, "Profile Launch Error", &err.to_string(), "error");
                 }
             }
         });
@@ -1663,6 +1665,7 @@ fn bind_instances_callbacks(window: &MainWindow, state: &AppState) {
             .map(|r| r.tag.to_string());
 
         let st = state_c.clone();
+        let st_callout = state_c.clone();
         let wk = weak.clone();
         state_c.runtime.clone().spawn(async move {
             let eid = engine_id.clone();
@@ -1679,13 +1682,13 @@ fn bind_instances_callbacks(window: &MainWindow, state: &AppState) {
 
             match res {
                 Ok(Ok(_pid)) => {
-                    show_callout(wk, &state_c, "Engine Launched", &format!("{engine_id} started."), "success");
+                    show_callout(wk, &st_callout, "Engine Launched", &format!("{engine_id} started."), "success");
                 }
                 Ok(Err(err)) => {
-                    show_callout(wk, &state_c, "Launch Error", &err.to_string(), "error");
+                    show_callout(wk, &st_callout, "Launch Error", &err.to_string(), "error");
                 }
                 Err(err) => {
-                    show_callout(wk, &state_c, "Launch Error", &err.to_string(), "error");
+                    show_callout(wk, &st_callout, "Launch Error", &err.to_string(), "error");
                 }
             }
         });

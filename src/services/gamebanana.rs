@@ -486,7 +486,9 @@ impl GameBananaClient {
 
         let page_url = raw
             .profile_url
+            .as_deref()
             .filter(|s| s.starts_with("http://") || s.starts_with("https://"))
+            .map(str::to_string)
             .unwrap_or_else(|| format!("https://gamebanana.com/mods/{id}"));
 
         let preview_urls = extract_preview_urls(&raw, true);

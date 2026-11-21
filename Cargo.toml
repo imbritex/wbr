@@ -5,6 +5,10 @@ edition = "2024"
 description = "WeekBox"
 build = "build.rs"
 
+[[bin]]
+name = "wb-r"
+path = "src/main.rs"
+
 [dependencies]
 slint = "1.19.0"
 tokio = { version = "1", features = ["full"] }
