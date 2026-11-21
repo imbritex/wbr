@@ -6,7 +6,7 @@ import {
     Typography,
 } from "@material";
 import { FeaturedModCardData } from "../adapter.slint";
-import { OutlinedIcons } from "../icons.slint";
+import { EngineIcons, OutlinedIcons } from "../icons.slint";
 
 component CarouselSlide {
     in property <FeaturedModCardData> item;
@@ -14,6 +14,25 @@ component CarouselSlide {
     in property <float> x_pct;
     in property <bool> compact: false;
     in property <length> container_width;
+
+    function resolve_engine_icon(eid: string) -> image {
+        if eid == "psych" { return EngineIcons.psych; }
+        if eid == "codename" { return EngineIcons.codename; }
+        if eid == "vslice" { return EngineIcons.vslice; }
+        if eid == "pslice" { return EngineIcons.pslice; }
+        if eid == "executable" { return EngineIcons.executable; }
+        if eid == "fpsplus" { return EngineIcons.fpsplus; }
+        if eid == "psychonline" { return EngineIcons.psychonline; }
+        return EngineIcons.vslice;
+    }
+
+    property <bool> show_engine_icon: root.item.engine_id == "psych"
+        || root.item.engine_id == "codename"
+        || root.item.engine_id == "vslice"
+        || root.item.engine_id == "pslice"
+        || root.item.engine_id == "executable"
+        || root.item.engine_id == "fpsplus"
+        || root.item.engine_id == "psychonline";
 
     property <float> content_opacity: root.compact
         ? clamp((root.w_pct - 20.0) / 70.0, 0.0, 1.0)
@@ -80,31 +99,45 @@ component CarouselSlide {
                 }
             }
 
-            // Bottom-left title, author & engine
-            if root.content_opacity > 0.02 : VerticalLayout {
+            // Bottom-left engine icon, title & author (matching wb-rew FeaturedModSlide)
+            if root.content_opacity > 0.02 : HorizontalLayout {
                 x: 0px;
                 y: parent.height - self.preferred-height;
                 width: 100%;
                 padding: root.compact ? 16px : 28px;
-                spacing: 4px;
+                spacing: root.compact ? 12px : 18px;
                 opacity: root.content_opacity;
 
-                MaterialText {
-                    text: root.item.title;
-                    font_size: root.compact ? 18px : 26px;
-                    font_weight: 700;
-                    color: #FFFFFF;
-                    overflow: elide;
+                if root.show_engine_icon : VerticalLayout {
+                    alignment: center;
+                    Image {
+                        width: root.compact ? 40px : 52px;
+                        height: root.compact ? 40px : 52px;
+                        source: root.resolve_engine_icon(root.item.engine_id);
+                        image-fit: contain;
+                    }
                 }
 
-                MaterialText {
-                    text: root.item.engine != ""
-                        ? "By " + root.item.author + " · " + root.item.engine
-                        : "By " + root.item.author;
-                    font_size: root.compact ? 12px : 14px;
-                    font_weight: 500;
-                    color: #E0E0E0;
-                    overflow: elide;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    spacing: 2px;
+
+                    MaterialText {
+                        text: root.item.title;
+                        font_size: root.compact ? 18px : 26px;
+                        font_weight: 700;
+                        color: #FFFFFF;
+                        overflow: elide;
+                    }
+
+                    MaterialText {
+                        text: root.item.author != "" ? "By " + root.item.author : "By Community";
+                        font_size: root.compact ? 12px : 14px;
+                        font_weight: 500;
+                        color: #E0E0E0;
+                        overflow: elide;
+                    }
                 }
             }
         }
@@ -134,7 +167,7 @@ export component FeaturedCarousel {
 
     function get_item(idx: int) -> FeaturedModCardData {
         if root.item_count <= 0 {
-            return { id: "", title: "", author: "", engine: "", badge: "", cover: OutlinedIcons.home, has_cover: false };
+            return { id: "", title: "", author: "", engine_id: "", engine: "", badge: "", cover: OutlinedIcons.home, has_cover: false };
         }
         return root.items[Math.mod(idx + root.item_count * 1000, root.item_count)];
     }

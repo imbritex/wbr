@@ -17,8 +17,20 @@ export struct FeaturedModCardData {
     id: string,
     title: string,
     author: string,
+    engine_id: string,
     engine: string,
     badge: string,
+    cover: image,
+    has_cover: bool,
+}
+
+export struct HomeModCardData {
+    id: string,
+    title: string,
+    author: string,
+    engine_id: string,
+    engine_name: string,
+    likes: int,
     cover: image,
     has_cover: bool,
 }
@@ -44,6 +56,10 @@ export global MainWindowAdapter {
     in_out property <[ModCardData]> mods: [];
     in_out property <[FeaturedModCardData]> featured_mods: [];
     in_out property <bool> featured_loading: true;
+    in_out property <[HomeModCardData]> home_mods: [];
+    in_out property <bool> home_mods_loading: true;
+    in_out property <bool> home_mods_loading_more: false;
+    in_out property <bool> home_mods_has_more: true;
     in_out property <[NewsItemData]> news: [];
     in_out property <bool> info_open: false;
     in_out property <bool> settings_open: false;
@@ -51,6 +67,8 @@ export global MainWindowAdapter {
     callback refresh_requested();
     callback search_mods(query: string);
     callback featured_mod_clicked(id: string);
+    callback home_mod_clicked(id: string);
+    callback load_more_home_mods();
     callback open_info();
     callback open_settings();
 }

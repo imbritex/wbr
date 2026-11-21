@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 use slint::{ComponentHandle, Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel};
@@ -10,7 +11,8 @@ use crate::services::gamebanana::GameBananaClient;
 use crate::services::github::GitHubClient;
 use crate::services::news::NewsService;
 use crate::{
-    EngineCardData, FeaturedModCardData, MainWindow, MainWindowAdapter, ModCardData, NewsItemData,
+    EngineCardData, FeaturedModCardData, HomeModCardData, MainWindow, MainWindowAdapter,
+    ModCardData, NewsItemData,
 };
 
 #[derive(Clone)]
@@ -22,6 +24,7 @@ pub struct AppState {
     pub gamebanana: Arc<GameBananaClient>,
     pub github: Arc<GitHubClient>,
     pub news: Arc<NewsService>,
+    pub home_mods_page: Arc<AtomicU32>,
 }
 
 pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
@@ -33,10 +36,12 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
         gamebanana: Arc::new(GameBananaClient::new()),
         github: Arc::new(GitHubClient::new()),
         news: Arc::new(NewsService::new()),
+        home_mods_page: Arc::new(AtomicU32::new(1)),
     };
 
     populate_initial_ui(window, &state);
     load_featured_mods(window, &state);
+    load_home_mods_page(window, &state, 1, false);
 
     let weak = window.as_weak();
     let state_clone = state.clone();
@@ -85,6 +90,32 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
             if let Some(win) = weak.upgrade() {
                 win.global::<MainWindowAdapter>()
                     .set_status_message(format!("Mod destacado seleccionado: #{id}").into());
+            }
+        });
+
+    let weak = window.as_weak();
+    window
+        .global::<MainWindowAdapter>()
+        .on_home_mod_clicked(move |id| {
+            if let Some(win) = weak.upgrade() {
+                win.global::<MainWindowAdapter>()
+                    .set_status_message(format!("Mod seleccionado: #{id}").into());
+            }
+        });
+
+    let weak = window.as_weak();
+    let state_clone = state.clone();
+    window
+        .global::<MainWindowAdapter>()
+        .on_load_more_home_mods(move || {
+            if let Some(win) = weak.upgrade() {
+                let adapter = win.global::<MainWindowAdapter>();
+                if adapter.get_home_mods_loading_more() || !adapter.get_home_mods_has_more() {
+                    return;
+                }
+                adapter.set_home_mods_loading_more(true);
+                let next_page = state_clone.home_mods_page.fetch_add(1, Ordering::SeqCst) + 1;
+                load_home_mods_page(&win, &state_clone, next_page, true);
             }
         });
 
@@ -141,6 +172,7 @@ fn load_featured_mods(window: &MainWindow, state: &AppState) {
                                 id: m.id.to_string().into(),
                                 title: m.title.into(),
                                 author: m.author.into(),
+                                engine_id: m.engine_id.into(),
                                 engine: m.engine.into(),
                                 badge: m.badge.into(),
                                 cover: Image::default(),
@@ -156,7 +188,7 @@ fn load_featured_mods(window: &MainWindow, state: &AppState) {
                 for (idx, url) in image_urls {
                     let gb = state.gamebanana.clone();
                     let weak_img = weak.clone();
-                    state.runtime.clone().spawn(async move {
+                    state.runtime.spawn(async move {
                         if let Some((w, h, rgba)) = gb.fetch_cover_rgba(&url).await {
                             let _ = slint::invoke_from_event_loop(move || {
                                 if let Some(win) = weak_img.upgrade() {
@@ -180,6 +212,102 @@ fn load_featured_mods(window: &MainWindow, state: &AppState) {
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(win) = weak.upgrade() {
                         win.global::<MainWindowAdapter>().set_featured_loading(false);
+                    }
+                });
+            }
+        }
+    });
+}
+
+fn load_home_mods_page(window: &MainWindow, state: &AppState, page: u32, append: bool) {
+    const PER_PAGE: u32 = 12;
+    let weak = window.as_weak();
+    let state = state.clone();
+
+    state.runtime.clone().spawn(async move {
+        match state.gamebanana.fetch_popular_mods_page(page, PER_PAGE).await {
+            Ok(mods) => {
+                let has_more = mods.len() >= PER_PAGE as usize;
+                let image_urls: Vec<String> = mods.iter().map(|m| m.image_url.clone()).collect();
+
+                let weak_ui = weak.clone();
+                let (tx, rx) = tokio::sync::oneshot::channel::<usize>();
+                let _ = slint::invoke_from_event_loop(move || {
+                    let mut start_idx = 0usize;
+                    if let Some(win) = weak_ui.upgrade() {
+                        let adapter = win.global::<MainWindowAdapter>();
+                        if append {
+                            let existing = adapter.get_home_mods();
+                            start_idx = existing.row_count();
+                            let mut combined: Vec<HomeModCardData> = (0..start_idx)
+                                .filter_map(|i| existing.row_data(i))
+                                .collect();
+                            combined.extend(mods.into_iter().map(|m| HomeModCardData {
+                                id: m.id.to_string().into(),
+                                title: m.title.into(),
+                                author: m.author.into(),
+                                engine_id: m.engine_id.into(),
+                                engine_name: m.engine_name.into(),
+                                likes: m.likes,
+                                cover: Image::default(),
+                                has_cover: false,
+                            }));
+                            adapter.set_home_mods(ModelRc::new(VecModel::from(combined)));
+                        } else {
+                            let cards: Vec<HomeModCardData> = mods
+                                .into_iter()
+                                .map(|m| HomeModCardData {
+                                    id: m.id.to_string().into(),
+                                    title: m.title.into(),
+                                    author: m.author.into(),
+                                    engine_id: m.engine_id.into(),
+                                    engine_name: m.engine_name.into(),
+                                    likes: m.likes,
+                                    cover: Image::default(),
+                                    has_cover: false,
+                                })
+                                .collect();
+                            adapter.set_home_mods(ModelRc::new(VecModel::from(cards)));
+                        }
+                        adapter.set_home_mods_has_more(has_more);
+                        adapter.set_home_mods_loading(false);
+                        adapter.set_home_mods_loading_more(false);
+                    }
+                    let _ = tx.send(start_idx);
+                });
+
+                if let Ok(base_idx) = rx.await {
+                    for (offset, url) in image_urls.into_iter().enumerate() {
+                        let target_idx = base_idx + offset;
+                        let gb = state.gamebanana.clone();
+                        let weak_img = weak.clone();
+                        state.runtime.spawn(async move {
+                            if let Some((w, h, rgba)) = gb.fetch_cover_rgba(&url).await {
+                                let _ = slint::invoke_from_event_loop(move || {
+                                    if let Some(win) = weak_img.upgrade() {
+                                        let model = win.global::<MainWindowAdapter>().get_home_mods();
+                                        if let Some(mut item) = model.row_data(target_idx) {
+                                            let buf = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(
+                                                &rgba, w, h,
+                                            );
+                                            item.cover = Image::from_rgba8(buf);
+                                            item.has_cover = true;
+                                            model.set_row_data(target_idx, item);
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+            Err(err) => {
+                tracing::warn!(%err, page, "Error cargando mods populares de GameBanana");
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(win) = weak.upgrade() {
+                        let adapter = win.global::<MainWindowAdapter>();
+                        adapter.set_home_mods_loading(false);
+                        adapter.set_home_mods_loading_more(false);
                     }
                 });
             }

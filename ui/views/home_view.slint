@@ -1,4 +1,5 @@
 import {
+    CircularProgressIndicator,
     ElevatedCard,
     FilledButton,
     MaterialPalette,
@@ -8,11 +9,85 @@ import {
     TonalButton,
     Typography,
 } from "@material";
-import { MainWindowAdapter, AppTab } from "../adapter.slint";
+import { MainWindowAdapter, AppTab, HomeModCardData } from "../adapter.slint";
 import { FeaturedCarousel } from "../components/featured_carousel.slint";
+
+component HomeModRowCard {
+    in property <HomeModCardData> item;
+    in property <bool> compact: false;
+
+    callback clicked(id: string);
+
+    ElevatedCard {
+        TouchArea {
+            clicked => {
+                root.clicked(root.item.id);
+            }
+
+            HorizontalLayout {
+                padding: MaterialStyleMetrics.padding_12;
+                spacing: MaterialStyleMetrics.spacing_12;
+
+                Rectangle {
+                    width: root.compact ? 112px : 160px;
+                    height: root.compact ? 64px : 90px;
+                    border_radius: 12px;
+                    background: MaterialPalette.surface_container_highest;
+                    clip: true;
+
+                    if root.item.has_cover : Image {
+                        width: 100%;
+                        height: 100%;
+                        source: root.item.cover;
+                        image-fit: cover;
+                    }
+                }
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    spacing: 4px;
+
+                    MaterialText {
+                        text: root.item.title;
+                        style: Typography.title_medium;
+                        color: MaterialPalette.on_surface;
+                        overflow: elide;
+                    }
+
+                    MaterialText {
+                        text: root.item.author != "" ? "By " + root.item.author : "By Community";
+                        style: Typography.body_medium;
+                        color: MaterialPalette.on_surface_variant;
+                        overflow: elide;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 12px;
+                        alignment: start;
+
+                        if root.item.engine_name != "" : MaterialText {
+                            text: root.item.engine_name;
+                            style: Typography.label_small;
+                            color: MaterialPalette.primary;
+                        }
+
+                        MaterialText {
+                            text: "♥ " + root.item.likes;
+                            style: Typography.label_small;
+                            color: MaterialPalette.on_surface_variant;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 export component HomeView inherits Rectangle {
     background: MaterialPalette.background;
+
+    property <bool> is_compact: root.width < 600px;
 
     ScrollView {
         width: 100%;
@@ -26,10 +101,88 @@ export component HomeView inherits Rectangle {
             FeaturedCarousel {
                 items: MainWindowAdapter.featured_mods;
                 loading: MainWindowAdapter.featured_loading;
-                compact: root.width < 600px;
+                compact: root.is_compact;
 
                 mod_clicked(id) => {
                     MainWindowAdapter.featured_mod_clicked(id);
+                }
+            }
+
+            // Popular - Most Liked Mods Section (from wb-rew ModsGridSection)
+            MaterialText {
+                text: "Popular - Most Liked Mods";
+                style: Typography.title_large;
+                color: MaterialPalette.on_background;
+            }
+
+            if MainWindowAdapter.home_mods_loading && MainWindowAdapter.home_mods.length == 0 : HorizontalLayout {
+                alignment: center;
+                padding: 24px;
+                spacing: 12px;
+
+                CircularProgressIndicator {
+                    indeterminate: true;
+                    width: 24px;
+                    height: 24px;
+                }
+
+                MaterialText {
+                    text: "Cargando mods populares de GameBanana...";
+                    style: Typography.body_medium;
+                    color: MaterialPalette.on_surface_variant;
+                    vertical_alignment: center;
+                }
+            }
+
+            VerticalLayout {
+                spacing: MaterialStyleMetrics.spacing_12;
+
+                for mod_item in MainWindowAdapter.home_mods : HomeModRowCard {
+                    item: mod_item;
+                    compact: root.is_compact;
+                    clicked(id) => {
+                        MainWindowAdapter.home_mod_clicked(id);
+                    }
+                }
+            }
+
+            // Pagination Footer (from wb-rew ModsPaginationFooter)
+            HorizontalLayout {
+                alignment: center;
+                padding_top: 12px;
+                padding_bottom: 24px;
+                spacing: 12px;
+
+                if MainWindowAdapter.home_mods_loading_more : HorizontalLayout {
+                    spacing: 10px;
+                    alignment: center;
+
+                    CircularProgressIndicator {
+                        indeterminate: true;
+                        width: 24px;
+                        height: 24px;
+                    }
+
+                    MaterialText {
+                        text: "Loading more mods...";
+                        style: Typography.label_large;
+                        color: MaterialPalette.primary;
+                        vertical_alignment: center;
+                    }
+                }
+
+                if !MainWindowAdapter.home_mods_loading_more && MainWindowAdapter.home_mods_has_more && MainWindowAdapter.home_mods.length > 0 : TonalButton {
+                    text: "Cargar más mods";
+                    clicked => {
+                        MainWindowAdapter.load_more_home_mods();
+                    }
+                }
+
+                if !MainWindowAdapter.home_mods_loading_more && !MainWindowAdapter.home_mods_has_more && MainWindowAdapter.home_mods.length > 0 : MaterialText {
+                    text: "You've reached the end of the collection.";
+                    style: Typography.body_small;
+                    color: MaterialPalette.on_surface_variant;
+                    opacity: 0.65;
                 }
             }
 
