@@ -8,6 +8,103 @@ import {
 import { FeaturedModCardData } from "../adapter.slint";
 import { OutlinedIcons } from "../icons.slint";
 
+component CarouselSlide {
+    in property <FeaturedModCardData> item;
+    in property <float> w_pct;
+    in property <float> x_pct;
+    in property <bool> compact: false;
+    in property <length> container_width;
+
+    property <float> content_opacity: root.compact
+        ? clamp((root.w_pct - 20.0) / 70.0, 0.0, 1.0)
+        : clamp((root.w_pct - 15.0) / 65.0, 0.0, 1.0);
+
+    x: root.container_width * (root.x_pct / 100.0);
+    y: 0px;
+    width: root.container_width * (root.w_pct / 100.0);
+    height: 100%;
+    visible: root.w_pct > 0.2;
+
+    HorizontalLayout {
+        padding_left: root.compact ? 4px : 6px;
+        padding_right: root.compact ? 4px : 6px;
+
+        card := Rectangle {
+            width: 100%;
+            height: 100%;
+            border_radius: root.compact ? 22px : 28px;
+            background: MaterialPalette.surface_container;
+            border_width: 1px;
+            border_color: MaterialPalette.outline_variant;
+            clip: true;
+
+            if root.item.has_cover : Image {
+                width: 100%;
+                height: 100%;
+                source: root.item.cover;
+                image-fit: cover;
+            }
+
+            // Bottom gradient for title/author readability
+            Rectangle {
+                width: 100%;
+                height: 100%;
+                background: @linear-gradient(180deg, #00000000 0%, #00000066 55%, #000000EB 100%);
+            }
+
+            // Top-left category badge pill
+            if root.item.badge != "" : Rectangle {
+                x: root.compact ? 14px : 24px;
+                y: root.compact ? 14px : 24px;
+                width: badge_text.preferred-width + 24px;
+                height: 30px;
+                border_radius: 15px;
+                background: #00000075;
+                border_width: 1px;
+                border_color: #FFFFFF22;
+                opacity: root.content_opacity;
+
+                badge_text := MaterialText {
+                    text: root.item.badge;
+                    font_size: 12px;
+                    font_weight: 600;
+                    color: #FFFFFF;
+                    horizontal_alignment: center;
+                    vertical_alignment: center;
+                }
+            }
+
+            // Bottom-left title, author & engine
+            VerticalLayout {
+                x: 0px;
+                y: parent.height - self.preferred-height;
+                width: 100%;
+                padding: root.compact ? 16px : 28px;
+                spacing: 4px;
+                opacity: root.content_opacity;
+
+                MaterialText {
+                    text: root.item.title;
+                    font_size: root.compact ? 18px : 26px;
+                    font_weight: 700;
+                    color: #FFFFFF;
+                    overflow: elide;
+                }
+
+                MaterialText {
+                    text: root.item.engine != ""
+                        ? "By " + root.item.author + " · " + root.item.engine
+                        : "By " + root.item.author;
+                    font_size: root.compact ? 12px : 14px;
+                    font_weight: 500;
+                    color: #E0E0E0;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+}
+
 export component FeaturedCarousel {
     in property <[FeaturedModCardData]> items;
     in property <bool> loading: false;
@@ -15,27 +112,44 @@ export component FeaturedCarousel {
 
     callback mod_clicked(id: string);
 
-    in_out property <int> active_index: 0;
+    property <float> visual_progress: 0.0;
+    animate visual_progress { duration: 550ms; easing: cubic-bezier(0.22, 1, 0.36, 1); }
 
-    property <FeaturedModCardData> current_item: root.items.length > 0 && root.active_index >= 0 && root.active_index < root.items.length
-        ? root.items[root.active_index]
-        : { id: "", title: "", author: "", engine: "", badge: "", cover: OutlinedIcons.home, has_cover: false };
+    property <int> item_count: root.items.length;
+    property <int> p_lower: floor(root.visual_progress);
+    property <float> fraction: root.visual_progress - root.p_lower;
+    property <int> active_index: root.item_count > 0
+        ? Math.mod(round(root.visual_progress) + root.item_count * 1000, root.item_count)
+        : 0;
+
+    function get_item(idx: int) -> FeaturedModCardData {
+        if root.item_count <= 0 {
+            return { id: "", title: "", author: "", engine: "", badge: "", cover: OutlinedIcons.home, has_cover: false };
+        }
+        return root.items[Math.mod(idx + root.item_count * 1000, root.item_count)];
+    }
 
     function next() {
-        if root.items.length > 0 {
-            root.active_index = Math.mod(root.active_index + 1, root.items.length);
+        if root.item_count > 1 {
+            root.visual_progress = round(root.visual_progress) + 1.0;
         }
     }
 
     function prev() {
-        if root.items.length > 0 {
-            root.active_index = Math.mod(root.active_index - 1 + root.items.length, root.items.length);
+        if root.item_count > 1 {
+            root.visual_progress = round(root.visual_progress) - 1.0;
+        }
+    }
+
+    function go_to(target: int) {
+        if root.item_count > 1 {
+            root.visual_progress = round(root.visual_progress) + (target - root.active_index);
         }
     }
 
     auto_timer := Timer {
         interval: 4500ms;
-        running: root.items.length > 1;
+        running: root.item_count > 1;
         triggered => {
             root.next();
         }
@@ -53,17 +167,17 @@ export component FeaturedCarousel {
                 color: MaterialPalette.on_background;
             }
 
-            if root.items.length > 0 : MaterialText {
-                text: (root.active_index + 1) + " / " + root.items.length;
+            if root.item_count > 0 : MaterialText {
+                text: (root.active_index + 1) + " / " + root.item_count;
                 style: Typography.label_medium;
                 color: MaterialPalette.on_surface_variant;
                 vertical_alignment: center;
             }
         }
 
-        if root.loading && root.items.length == 0 : Rectangle {
-            height: root.compact ? 240px : 340px;
-            border_radius: 28px;
+        if root.loading && root.item_count == 0 : Rectangle {
+            height: clamp(self.width * (root.compact ? 0.56 : 0.46), 220px, 520px);
+            border_radius: root.compact ? 22px : 28px;
             background: MaterialPalette.surface_container;
             border_width: 1px;
             border_color: MaterialPalette.outline_variant;
@@ -77,83 +191,78 @@ export component FeaturedCarousel {
             }
         }
 
-        if root.items.length > 0 : VerticalLayout {
+        if root.item_count > 0 : VerticalLayout {
             spacing: 12px;
 
-            // Material 3 Hero Carousel Card
-            Rectangle {
-                height: root.compact ? 240px : 340px;
-                border_radius: 28px;
-                background: MaterialPalette.surface_container;
-                border_width: 1px;
-                border_color: MaterialPalette.outline_variant;
+            // Material 3 Expressive Carousel Viewport (Desktop: 10-80-10, Mobile: 90-10)
+            viewport := Rectangle {
+                width: 100%;
+                height: clamp(self.width * (root.compact ? 0.56 : 0.46), 220px, 520px);
                 clip: true;
 
-                if root.current_item.has_cover : Image {
-                    width: 100%;
-                    height: 100%;
-                    source: root.current_item.cover;
-                    image-fit: cover;
+                if root.item_count == 1 : CarouselSlide {
+                    item: root.get_item(0);
+                    w_pct: 100.0;
+                    x_pct: 0.0;
+                    compact: root.compact;
+                    container_width: viewport.width;
                 }
 
-                // Bottom dark gradient for readable title/author
-                Rectangle {
-                    width: 100%;
-                    height: 100%;
-                    background: @linear-gradient(180deg, #00000000 0%, #00000077 55%, #000000EE 100%);
+                // Slot A: Left pill (Desktop 10% -> 0%, Mobile hidden)
+                if root.item_count > 1 : CarouselSlide {
+                    item: root.get_item(root.p_lower - 1);
+                    x_pct: 0.0;
+                    w_pct: root.compact ? 0.0 : max(0.0, 10.0 - 10.0 * root.fraction);
+                    compact: root.compact;
+                    container_width: viewport.width;
                 }
 
-                // Top-left category badge pill
-                if root.current_item.badge != "" : Rectangle {
-                    x: root.compact ? 16px : 24px;
-                    y: root.compact ? 16px : 24px;
-                    width: badge_text.preferred-width + 24px;
-                    height: 30px;
-                    border_radius: 15px;
-                    background: #00000075;
-                    border_width: 1px;
-                    border_color: #FFFFFF22;
-
-                    badge_text := MaterialText {
-                        text: root.current_item.badge;
-                        font_size: 12px;
-                        font_weight: 600;
-                        color: #FFFFFF;
-                        horizontal_alignment: center;
-                        vertical_alignment: center;
-                    }
+                // Slot B: Active center card (Desktop 80% -> 10%, Mobile 90% -> 0%)
+                if root.item_count > 1 : CarouselSlide {
+                    item: root.get_item(root.p_lower);
+                    x_pct: root.compact ? 0.0 : (10.0 - 10.0 * root.fraction);
+                    w_pct: root.compact ? max(0.0, 90.0 - 90.0 * root.fraction) : max(0.0, 80.0 - 70.0 * root.fraction);
+                    compact: root.compact;
+                    container_width: viewport.width;
                 }
 
-                // Bottom-left mod title, author & engine
-                VerticalLayout {
-                    x: 0px;
-                    y: parent.height - self.preferred-height;
-                    width: 100%;
-                    padding: root.compact ? 18px : 28px;
-                    spacing: 4px;
-
-                    MaterialText {
-                        text: root.current_item.title;
-                        font_size: root.compact ? 20px : 28px;
-                        font_weight: 700;
-                        color: #FFFFFF;
-                        overflow: elide;
-                    }
-
-                    MaterialText {
-                        text: root.current_item.engine != ""
-                            ? "By " + root.current_item.author + " · " + root.current_item.engine
-                            : "By " + root.current_item.author;
-                        font_size: root.compact ? 12px : 14px;
-                        font_weight: 500;
-                        color: #E0E0E0;
-                        overflow: elide;
-                    }
+                // Slot C: Right preview pill (Desktop 10% -> 80%, Mobile 10% -> 90%)
+                if root.item_count > 1 : CarouselSlide {
+                    item: root.get_item(root.p_lower + 1);
+                    x_pct: root.compact ? (90.0 - 90.0 * root.fraction) : (90.0 - 80.0 * root.fraction);
+                    w_pct: root.compact ? min(90.0, 10.0 + 80.0 * root.fraction) : min(80.0, 10.0 + 70.0 * root.fraction);
+                    compact: root.compact;
+                    container_width: viewport.width;
                 }
 
-                TouchArea {
-                    clicked => {
-                        root.mod_clicked(root.current_item.id);
+                // Slot D: Entering right pill (0% -> 10%)
+                if root.item_count > 1 : CarouselSlide {
+                    item: root.get_item(root.p_lower + 2);
+                    x_pct: 100.0 - 10.0 * root.fraction;
+                    w_pct: min(10.0, 10.0 * root.fraction);
+                    compact: root.compact;
+                    container_width: viewport.width;
+                }
+
+                swipe_area := TouchArea {
+                    property <length> drag_start_x: 0px;
+
+                    pointer-event(event) => {
+                        if event.kind == PointerEventKind.down {
+                            self.drag_start_x = self.mouse-x;
+                        } else if event.kind == PointerEventKind.up {
+                            if (self.mouse-x - self.drag_start_x) < -36px {
+                                root.next();
+                            } else if (self.mouse-x - self.drag_start_x) > 36px {
+                                root.prev();
+                            } else if !root.compact && self.mouse-x < viewport.width * 0.1 {
+                                root.prev();
+                            } else if self.mouse-x > viewport.width * 0.9 {
+                                root.next();
+                            } else {
+                                root.mod_clicked(root.get_item(root.active_index).id);
+                            }
+                        }
                     }
                 }
             }
@@ -166,7 +275,7 @@ export component FeaturedCarousel {
                 IconButton {
                     icon: OutlinedIcons.chevron_left;
                     tooltip: "Previous";
-                    enabled: root.items.length > 1;
+                    enabled: root.item_count > 1;
                     clicked => {
                         root.prev();
                     }
@@ -194,7 +303,7 @@ export component FeaturedCarousel {
 
                             TouchArea {
                                 clicked => {
-                                    root.active_index = idx;
+                                    root.go_to(idx);
                                 }
                             }
                         }
@@ -204,7 +313,7 @@ export component FeaturedCarousel {
                 IconButton {
                     icon: OutlinedIcons.chevron_right;
                     tooltip: "Next";
-                    enabled: root.items.length > 1;
+                    enabled: root.item_count > 1;
                     clicked => {
                         root.next();
                     }
