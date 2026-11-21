@@ -33,7 +33,11 @@ export global MainWindowAdapter {
     in_out property <[EngineCardData]> engines: [];
     in_out property <[ModCardData]> mods: [];
     in_out property <[NewsItemData]> news: [];
+    in_out property <bool> info_open: false;
+    in_out property <bool> settings_open: false;
 
     callback refresh_requested();
     callback search_mods(query: string);
+    callback open_info();
+    callback open_settings();
 }

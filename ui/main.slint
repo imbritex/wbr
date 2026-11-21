@@ -2,13 +2,12 @@ import { Palette } from "std-widgets.slint";
 import {
     MaterialPalette,
     MaterialWindow,
-    NavigationBar,
     NavigationItem,
-    NavigationRail,
     SmallAppBar,
 } from "@material";
 import { AppTab, MainWindowAdapter } from "./adapter.slint";
 import { FilledIcons, OutlinedIcons } from "./icons.slint";
+import { DesktopSidebar, MobileBottomNav } from "./components/sidebar.slint";
 import { HomeView } from "./views/home_view.slint";
 import { LibraryView } from "./views/library_view.slint";
 import { InstancesView } from "./views/instances_view.slint";
@@ -29,25 +28,36 @@ export component MainWindow inherits MaterialWindow {
     property <[NavigationItem]> nav_items: [
         {
             text: "Inicio",
-            icon: OutlinedIcons.dashboard,
-            selected_icon: FilledIcons.dashboard,
+            icon: OutlinedIcons.home,
+            selected_icon: FilledIcons.home,
         },
         {
             text: "Biblioteca",
-            icon: OutlinedIcons.explore,
-            selected_icon: FilledIcons.explore,
+            icon: OutlinedIcons.library,
+            selected_icon: FilledIcons.library,
         },
         {
             text: "Instancias",
-            icon: OutlinedIcons.archive,
-            selected_icon: FilledIcons.archive,
+            icon: OutlinedIcons.instances,
+            selected_icon: FilledIcons.instances,
         },
         {
             text: "Noticias",
-            icon: OutlinedIcons.inbox,
-            selected_icon: FilledIcons.inbox,
+            icon: OutlinedIcons.news,
+            selected_icon: FilledIcons.news,
         },
     ];
+
+    function tab_to_index(tab: AppTab) -> int {
+        if tab == AppTab.home {
+            return 0;
+        } else if tab == AppTab.library {
+            return 1;
+        } else if tab == AppTab.instances {
+            return 2;
+        }
+        return 3;
+    }
 
     function set_tab_by_index(idx: int) {
         if idx == 0 {
@@ -87,10 +97,22 @@ export component MainWindow inherits MaterialWindow {
         if !root.compact_layout : HorizontalLayout {
             vertical-stretch: 1;
 
-            NavigationRail {
+            DesktopSidebar {
                 items: root.nav_items;
+                current_index: root.tab_to_index(MainWindowAdapter.active_tab);
+                info_open: MainWindowAdapter.info_open;
+                settings_open: MainWindowAdapter.settings_open;
+
                 index_changed(index) => {
                     root.set_tab_by_index(index);
+                }
+
+                info_clicked => {
+                    MainWindowAdapter.open_info();
+                }
+
+                settings_clicked => {
+                    MainWindowAdapter.open_settings();
                 }
             }
 
@@ -138,10 +160,17 @@ export component MainWindow inherits MaterialWindow {
                 }
             }
 
-            NavigationBar {
+            MobileBottomNav {
                 items: root.nav_items;
+                current_index: root.tab_to_index(MainWindowAdapter.active_tab);
+                settings_open: MainWindowAdapter.settings_open;
+
                 index_changed(index) => {
                     root.set_tab_by_index(index);
+                }
+
+                settings_clicked => {
+                    MainWindowAdapter.open_settings();
                 }
             }
         }

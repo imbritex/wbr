@@ -1,0 +1,312 @@
+import {
+    ExtendedTouchArea,
+    HorizontalDivider,
+    Icon,
+    IconButton,
+    MaterialPalette,
+    MaterialText,
+    NavigationItem,
+    Ripple,
+    StateLayer,
+    VerticalDivider,
+} from "@material";
+import { AppAssets, FilledIcons, OutlinedIcons } from "../icons.slint";
+
+component SidebarNavButton {
+    in property <image> icon;
+    in property <image> selected_icon;
+    in property <string> text;
+    in property <bool> selected;
+    in property <bool> compact: false;
+
+    callback clicked();
+
+    min_width: root.compact ? 56px : 76px;
+    min_height: root.compact ? 52px : 56px;
+
+    touch_area := ExtendedTouchArea {
+        clicked => {
+            root.clicked();
+        }
+
+        VerticalLayout {
+            alignment: center;
+            spacing: 4px;
+
+            HorizontalLayout {
+                alignment: center;
+
+                pill := Rectangle {
+                    width: 56px;
+                    height: 32px;
+                    border_radius: 16px;
+                    background: root.selected ? MaterialPalette.secondary_container : transparent;
+
+                    animate background { duration: 150ms; }
+
+                    state_layer := StateLayer {
+                        width: 100%;
+                        height: 100%;
+                        background: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+                        border_radius: parent.border_radius;
+                        enabled: true;
+                        has_focus: touch_area.has_focus;
+                        has_hover: touch_area.has_hover;
+                        pressed: touch_area.pressed || touch_area.enter_pressed;
+
+                        if touch_area.pressed && !root.selected : Ripple {
+                            width: parent.width;
+                            height: parent.height;
+                            border_radius: parent.border_radius;
+                            pressed_x: touch_area.pressed_x;
+                            pressed_y: touch_area.pressed_y;
+                            color: MaterialPalette.on_surface;
+                        }
+                    }
+
+                    Icon {
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        width: 24px;
+                        height: 24px;
+                        source: root.selected ? root.selected_icon : root.icon;
+                        colorize: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+                    }
+                }
+            }
+
+            MaterialText {
+                text: root.text;
+                font_size: root.compact ? 10px : 11px;
+                font_weight: root.selected ? 700 : 500;
+                color: root.selected ? MaterialPalette.primary : MaterialPalette.on_surface_variant;
+                horizontal_alignment: center;
+                overflow: elide;
+            }
+        }
+    }
+}
+
+export component DesktopSidebar {
+    in property <[NavigationItem]> items;
+    in_out property <int> current_index: 0;
+    in property <bool> info_open: false;
+    in property <bool> settings_open: false;
+
+    callback index_changed(index: int);
+    callback info_clicked();
+    callback settings_clicked();
+
+    width: 92px;
+    min_width: 92px;
+
+    // Background layer: recessed action rail with Info & Settings
+    Rectangle {
+        x: 0;
+        y: 0;
+        width: 68px;
+        height: 100%;
+        background: MaterialPalette.surface_container_high;
+        border-top-right-radius: 16px;
+        border-bottom-right-radius: 16px;
+
+        VerticalLayout {
+            padding_bottom: 24px;
+            padding_right: 4px;
+            alignment: end;
+
+            HorizontalLayout {
+                alignment: end;
+
+                VerticalLayout {
+                    width: 38px;
+                    spacing: 12px;
+                    alignment: center;
+
+                    IconButton {
+                        icon: root.info_open ? FilledIcons.info : OutlinedIcons.info;
+                        tooltip: "Information";
+                        enabled: true;
+                        clicked => {
+                            root.info_clicked();
+                        }
+                    }
+
+                    IconButton {
+                        icon: root.settings_open ? FilledIcons.sidebar_settings : OutlinedIcons.sidebar_settings;
+                        tooltip: "Settings";
+                        enabled: true;
+                        clicked => {
+                            root.settings_clicked();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Foreground layer: top navigation block + curved transition + bottom 20px strip
+    VerticalLayout {
+        x: 0;
+        y: 0;
+        width: 92px;
+        height: 100%;
+        spacing: 0px;
+
+        Rectangle {
+            width: 92px;
+            background: MaterialPalette.surface_container_low;
+            border-top-right-radius: 16px;
+
+            VerticalLayout {
+                padding_top: 20px;
+                padding_bottom: 8px;
+                spacing: 16px;
+
+                HorizontalLayout {
+                    alignment: center;
+
+                    Rectangle {
+                        width: 40px;
+                        height: 40px;
+                        border_radius: 12px;
+                        clip: true;
+
+                        Image {
+                            width: 100%;
+                            height: 100%;
+                            source: AppAssets.launcher_icon;
+                            image-fit: contain;
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 8px;
+                    padding_left: 4px;
+                    padding_right: 4px;
+
+                    for item[index] in root.items : SidebarNavButton {
+                        icon: item.icon;
+                        selected_icon: item.selected_icon;
+                        text: item.text;
+                        selected: index == root.current_index;
+
+                        clicked => {
+                            root.current_index = index;
+                            root.index_changed(index);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Smooth asymmetric curve transition from 92px to 20px
+        Path {
+            width: 92px;
+            height: 56px;
+            viewbox-width: 92;
+            viewbox-height: 64;
+            fill: MaterialPalette.surface_container_low;
+
+            MoveTo { x: 92; y: 0; }
+            CubicTo {
+                control-1-x: 92;
+                control-1-y: 32;
+                control-2-x: 20;
+                control-2-y: 32;
+                x: 20;
+                y: 64;
+            }
+            LineTo { x: 0; y: 64; }
+            LineTo { x: 0; y: 0; }
+            Close {}
+        }
+
+        // Bottom 20px strip leaving space for Info & Settings buttons on the right
+        Rectangle {
+            vertical-stretch: 1;
+            background: transparent;
+
+            Rectangle {
+                x: 0;
+                y: 0;
+                width: 20px;
+                height: 100%;
+                background: MaterialPalette.surface_container_low;
+                border-bottom-right-radius: 16px;
+            }
+        }
+    }
+}
+
+export component MobileBottomNav {
+    in property <[NavigationItem]> items;
+    in_out property <int> current_index: 0;
+    in property <bool> settings_open: false;
+
+    callback index_changed(index: int);
+    callback settings_clicked();
+
+    min_height: 72px;
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: MaterialPalette.surface_container_low;
+
+        VerticalLayout {
+            HorizontalDivider {}
+
+            HorizontalLayout {
+                vertical-stretch: 1;
+                padding_left: 8px;
+                padding_right: 8px;
+                padding_top: 6px;
+                padding_bottom: 8px;
+                alignment: space-around;
+
+                for item[index] in root.items : SidebarNavButton {
+                    icon: item.icon;
+                    selected_icon: item.selected_icon;
+                    text: item.text;
+                    selected: index == root.current_index;
+                    compact: true;
+
+                    clicked => {
+                        root.current_index = index;
+                        root.index_changed(index);
+                    }
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+                    padding_left: 4px;
+                    padding_right: 4px;
+
+                    VerticalLayout {
+                        alignment: center;
+                        VerticalDivider {
+                            height: 24px;
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+                    VerticalLayout {
+                        alignment: center;
+                        IconButton {
+                            icon: root.settings_open ? FilledIcons.sidebar_settings : OutlinedIcons.sidebar_settings;
+                            tooltip: "Settings";
+                            enabled: true;
+                            clicked => {
+                                root.settings_clicked();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -74,6 +74,36 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
                 });
             });
         });
+
+    let weak = window.as_weak();
+    window
+        .global::<MainWindowAdapter>()
+        .on_open_info(move || {
+            if let Some(win) = weak.upgrade() {
+                let adapter = win.global::<MainWindowAdapter>();
+                let next = !adapter.get_info_open();
+                adapter.set_info_open(next);
+                if next {
+                    adapter.set_settings_open(false);
+                    adapter.set_status_message("Información de WeekBox".into());
+                }
+            }
+        });
+
+    let weak = window.as_weak();
+    window
+        .global::<MainWindowAdapter>()
+        .on_open_settings(move || {
+            if let Some(win) = weak.upgrade() {
+                let adapter = win.global::<MainWindowAdapter>();
+                let next = !adapter.get_settings_open();
+                adapter.set_settings_open(next);
+                if next {
+                    adapter.set_info_open(false);
+                    adapter.set_status_message("Configuración".into());
+                }
+            }
+        });
 }
 
 fn populate_initial_ui(window: &MainWindow, state: &AppState) {
