@@ -132,22 +132,21 @@ fn load_featured_mods(window: &MainWindow, state: &AppState) {
                     .map(|(i, m)| (i, m.image_url.clone()))
                     .collect();
 
-                let cards: Vec<FeaturedModCardData> = mods
-                    .into_iter()
-                    .map(|m| FeaturedModCardData {
-                        id: m.id.to_string().into(),
-                        title: m.title.into(),
-                        author: m.author.into(),
-                        engine: m.engine.into(),
-                        badge: m.badge.into(),
-                        cover: Image::default(),
-                        has_cover: false,
-                    })
-                    .collect();
-
                 let weak_ui = weak.clone();
                 let _ = slint::invoke_from_event_loop(move || {
                     if let Some(win) = weak_ui.upgrade() {
+                        let cards: Vec<FeaturedModCardData> = mods
+                            .into_iter()
+                            .map(|m| FeaturedModCardData {
+                                id: m.id.to_string().into(),
+                                title: m.title.into(),
+                                author: m.author.into(),
+                                engine: m.engine.into(),
+                                badge: m.badge.into(),
+                                cover: Image::default(),
+                                has_cover: false,
+                            })
+                            .collect();
                         let adapter = win.global::<MainWindowAdapter>();
                         adapter.set_featured_mods(ModelRc::new(VecModel::from(cards)));
                         adapter.set_featured_loading(false);
