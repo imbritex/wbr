@@ -1,0 +1,148 @@
+import {
+    HorizontalDivider,
+    MaterialPalette,
+    MaterialText,
+} from "@material";
+import { HomeModCardData } from "../adapter.slint";
+import { EngineIcons } from "../icons.slint";
+
+export component ModGridCard {
+    in property <HomeModCardData> item;
+
+    callback clicked(id: string);
+
+    function resolve_engine_icon(eid: string) -> image {
+        if eid == "psych" { return EngineIcons.psych; }
+        if eid == "codename" { return EngineIcons.codename; }
+        if eid == "vslice" { return EngineIcons.vslice; }
+        if eid == "pslice" { return EngineIcons.pslice; }
+        if eid == "executable" { return EngineIcons.executable; }
+        if eid == "fpsplus" { return EngineIcons.fpsplus; }
+        if eid == "psychonline" { return EngineIcons.psychonline; }
+        return EngineIcons.vslice;
+    }
+
+    property <bool> show_engine_icon: root.item.engine_id == "psych"
+        || root.item.engine_id == "codename"
+        || root.item.engine_id == "vslice"
+        || root.item.engine_id == "pslice"
+        || root.item.engine_id == "executable"
+        || root.item.engine_id == "fpsplus"
+        || root.item.engine_id == "psychonline";
+
+    card_bg := Rectangle {
+        width: 100%;
+        height: 100%;
+        border_radius: 16px;
+        background: touch.has_hover
+            ? MaterialPalette.surface_container
+            : MaterialPalette.surface_container_low;
+        border_width: 1px;
+        border_color: touch.has_hover
+            ? MaterialPalette.outline
+            : MaterialPalette.outline_variant;
+        clip: true;
+
+        animate background { duration: 150ms; }
+        animate border_color { duration: 150ms; }
+
+        touch := TouchArea {
+            clicked => {
+                root.clicked(root.item.id);
+            }
+        }
+
+        VerticalLayout {
+            padding: 0px;
+            spacing: 0px;
+
+            // 16:9 Thumbnail with top-left engine icon badge (from wb-rew CardThumbnail)
+            thumb := Rectangle {
+                width: 100%;
+                height: self.width * 9 / 16;
+                background: MaterialPalette.surface_container_highest;
+                clip: true;
+
+                if root.item.has_cover : Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.item.cover;
+                    image-fit: cover;
+                }
+
+                if root.show_engine_icon : Rectangle {
+                    x: 0px;
+                    y: 0px;
+                    width: 44px;
+                    height: 44px;
+                    border_bottom_right_radius: 14px;
+                    background: card_bg.background;
+
+                    Image {
+                        x: (parent.width - self.width) / 2 - 1px;
+                        y: (parent.height - self.height) / 2 - 1px;
+                        width: 28px;
+                        height: 28px;
+                        source: root.resolve_engine_icon(root.item.engine_id);
+                        image-fit: contain;
+                    }
+                }
+            }
+
+            // Card content (from wb-rew CardContent + ModGridCard stats)
+            VerticalLayout {
+                vertical-stretch: 1;
+                padding: 12px;
+                spacing: 6px;
+
+                MaterialText {
+                    text: root.item.title;
+                    font_size: 14px;
+                    font_weight: 700;
+                    color: MaterialPalette.on_surface;
+                    overflow: elide;
+                }
+
+                MaterialText {
+                    text: root.item.author != "" ? root.item.author : "Unknown Creator";
+                    font_size: 12px;
+                    font_weight: 600;
+                    color: MaterialPalette.on_surface_variant;
+                    overflow: elide;
+                }
+
+                Rectangle {
+                    vertical-stretch: 1;
+                }
+
+                HorizontalDivider {}
+
+                HorizontalLayout {
+                    padding_top: 2px;
+                    alignment: space-between;
+
+                    MaterialText {
+                        text: "👁 " + root.item.views;
+                        font_size: 11px;
+                        font_weight: 500;
+                        color: MaterialPalette.on_surface_variant;
+                    }
+
+                    MaterialText {
+                        text: "♥ " + root.item.likes;
+                        font_size: 11px;
+                        font_weight: 500;
+                        color: MaterialPalette.on_surface_variant;
+                    }
+
+                    MaterialText {
+                        text: "⬇ " + root.item.downloads;
+                        font_size: 11px;
+                        font_weight: 500;
+                        color: MaterialPalette.on_surface_variant;
+                    }
+                }
+            }
+        }
+    }
+}

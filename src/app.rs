@@ -249,6 +249,8 @@ fn load_home_mods_page(window: &MainWindow, state: &AppState, page: u32, append:
                                 engine_id: m.engine_id.into(),
                                 engine_name: m.engine_name.into(),
                                 likes: m.likes,
+                                views: m.views,
+                                downloads: m.downloads,
                                 cover: Image::default(),
                                 has_cover: false,
                             }));
@@ -263,6 +265,8 @@ fn load_home_mods_page(window: &MainWindow, state: &AppState, page: u32, append:
                                     engine_id: m.engine_id.into(),
                                     engine_name: m.engine_name.into(),
                                     likes: m.likes,
+                                    views: m.views,
+                                    downloads: m.downloads,
                                     cover: Image::default(),
                                     has_cover: false,
                                 })

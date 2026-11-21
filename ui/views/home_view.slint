@@ -9,80 +9,9 @@ import {
     TonalButton,
     Typography,
 } from "@material";
-import { MainWindowAdapter, AppTab, HomeModCardData } from "../adapter.slint";
+import { MainWindowAdapter, AppTab } from "../adapter.slint";
 import { FeaturedCarousel } from "../components/featured_carousel.slint";
-
-component HomeModRowCard {
-    in property <HomeModCardData> item;
-    in property <bool> compact: false;
-
-    callback clicked(id: string);
-
-    ElevatedCard {
-        TouchArea {
-            clicked => {
-                root.clicked(root.item.id);
-            }
-
-            HorizontalLayout {
-                padding: MaterialStyleMetrics.padding_12;
-                spacing: MaterialStyleMetrics.spacing_12;
-
-                Rectangle {
-                    width: root.compact ? 112px : 160px;
-                    height: root.compact ? 64px : 90px;
-                    border_radius: 12px;
-                    background: MaterialPalette.surface_container_highest;
-                    clip: true;
-
-                    if root.item.has_cover : Image {
-                        width: 100%;
-                        height: 100%;
-                        source: root.item.cover;
-                        image-fit: cover;
-                    }
-                }
-
-                VerticalLayout {
-                    horizontal-stretch: 1;
-                    alignment: center;
-                    spacing: 4px;
-
-                    MaterialText {
-                        text: root.item.title;
-                        style: Typography.title_medium;
-                        color: MaterialPalette.on_surface;
-                        overflow: elide;
-                    }
-
-                    MaterialText {
-                        text: root.item.author != "" ? "By " + root.item.author : "By Community";
-                        style: Typography.body_medium;
-                        color: MaterialPalette.on_surface_variant;
-                        overflow: elide;
-                    }
-
-                    HorizontalLayout {
-                        spacing: 12px;
-                        alignment: start;
-
-                        if root.item.engine_name != "" : MaterialText {
-                            text: root.item.engine_name;
-                            style: Typography.label_small;
-                            color: MaterialPalette.primary;
-                        }
-
-                        MaterialText {
-                            text: "♥ " + root.item.likes;
-                            style: Typography.label_small;
-                            color: MaterialPalette.on_surface_variant;
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
+import { ModGridCard } from "../components/mod_card.slint";
 
 export component HomeView inherits Rectangle {
     background: MaterialPalette.background;
@@ -134,12 +63,29 @@ export component HomeView inherits Rectangle {
                 }
             }
 
-            VerticalLayout {
-                spacing: MaterialStyleMetrics.spacing_12;
+            // Responsive Mods Grid (1 / 2 / 3 / 4 columns)
+            grid_container := Rectangle {
+                width: 100%;
+                property <int> cols: root.width >= 1160px ? 4 : root.width >= 820px ? 3 : root.width >= 500px ? 2 : 1;
+                property <length> gap: 14px;
+                property <length> card_width: (self.width - (self.cols - 1) * self.gap) / self.cols;
+                property <length> card_height: self.card_width * 9 / 16 + 108px;
+                property <int> rows: MainWindowAdapter.home_mods.length > 0
+                    ? floor((MainWindowAdapter.home_mods.length + self.cols - 1) / self.cols)
+                    : 0;
 
-                for mod_item in MainWindowAdapter.home_mods : HomeModRowCard {
+                height: self.rows > 0 ? self.rows * self.card_height + (self.rows - 1) * self.gap : 0px;
+
+                for mod_item[idx] in MainWindowAdapter.home_mods : ModGridCard {
+                    property <int> col: mod(idx, grid_container.cols);
+                    property <int> row: floor(idx / grid_container.cols);
+
+                    x: self.col * (grid_container.card_width + grid_container.gap);
+                    y: self.row * (grid_container.card_height + grid_container.gap);
+                    width: grid_container.card_width;
+                    height: grid_container.card_height;
                     item: mod_item;
-                    compact: root.is_compact;
+
                     clicked(id) => {
                         MainWindowAdapter.home_mod_clicked(id);
                     }

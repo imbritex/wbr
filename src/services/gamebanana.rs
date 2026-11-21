@@ -86,6 +86,10 @@ struct GbModRecordRaw {
     name: String,
     #[serde(rename = "_nLikeCount", default)]
     like_count: i32,
+    #[serde(rename = "_nViewCount", default)]
+    view_count: i32,
+    #[serde(rename = "_nDownloadCount", default)]
+    download_count: i32,
     #[serde(rename = "_aSubmitter", default)]
     submitter: Option<GbSubmitterRaw>,
     #[serde(rename = "_aRootCategory", default)]
@@ -119,6 +123,8 @@ pub struct HomeMod {
     pub engine_id: String,
     pub engine_name: String,
     pub likes: i32,
+    pub views: i32,
+    pub downloads: i32,
     pub image_url: String,
 }
 
@@ -217,6 +223,8 @@ impl GameBananaClient {
                 engine_id: map_category_id_to_engine_id(cat_id).to_string(),
                 engine_name,
                 likes: rec.like_count,
+                views: rec.view_count,
+                downloads: rec.download_count,
                 image_url,
             });
         }
