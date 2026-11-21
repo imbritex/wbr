@@ -100,8 +100,8 @@ impl GameBananaClient {
         }
         let bytes = resp.bytes().await.ok()?;
         let mut img = image::load_from_memory(&bytes).ok()?;
-        if img.width() > 960 {
-            img = img.resize(960, 540, image::imageops::FilterType::Triangle);
+        if img.width() > 720 {
+            img = img.resize(720, 405, image::imageops::FilterType::Triangle);
         }
         let rgba = img.to_rgba8();
         let (w, h) = rgba.dimensions();

@@ -19,6 +19,9 @@ component CarouselSlide {
         ? clamp((root.w_pct - 20.0) / 70.0, 0.0, 1.0)
         : clamp((root.w_pct - 15.0) / 65.0, 0.0, 1.0);
 
+    // Keep image at hero width so shrinking/expanding pills only clip without rescaling every frame
+    property <length> hero_width: root.container_width * (root.compact ? 0.9 : 0.8);
+
     x: root.container_width * (root.x_pct / 100.0);
     y: 0px;
     width: root.container_width * (root.w_pct / 100.0);
@@ -39,21 +42,24 @@ component CarouselSlide {
             clip: true;
 
             if root.item.has_cover : Image {
-                width: 100%;
+                x: (parent.width - self.width) / 2;
+                y: 0px;
+                width: max(parent.width, root.hero_width);
                 height: 100%;
                 source: root.item.cover;
                 image-fit: cover;
             }
 
             // Bottom gradient for title/author readability
-            Rectangle {
+            if root.content_opacity > 0.02 : Rectangle {
                 width: 100%;
                 height: 100%;
+                opacity: root.content_opacity;
                 background: @linear-gradient(180deg, #00000000 0%, #00000066 55%, #000000EB 100%);
             }
 
             // Top-left category badge pill
-            if root.item.badge != "" : Rectangle {
+            if root.item.badge != "" && root.content_opacity > 0.02 : Rectangle {
                 x: root.compact ? 14px : 24px;
                 y: root.compact ? 14px : 24px;
                 width: badge_text.preferred-width + 24px;
@@ -75,7 +81,7 @@ component CarouselSlide {
             }
 
             // Bottom-left title, author & engine
-            VerticalLayout {
+            if root.content_opacity > 0.02 : VerticalLayout {
                 x: 0px;
                 y: parent.height - self.preferred-height;
                 width: 100%;
@@ -113,7 +119,7 @@ export component FeaturedCarousel {
     callback mod_clicked(id: string);
 
     property <float> visual_progress: 0.0;
-    animate visual_progress { duration: 550ms; easing: cubic-bezier(0.22, 1, 0.36, 1); }
+    animate visual_progress { duration: 480ms; easing: cubic-bezier(0.22, 1, 0.36, 1); }
 
     property <int> item_count: root.items.length;
     property <int> p_lower: floor(root.visual_progress);
@@ -121,6 +127,10 @@ export component FeaturedCarousel {
     property <int> active_index: root.item_count > 0
         ? Math.mod(round(root.visual_progress) + root.item_count * 1000, root.item_count)
         : 0;
+    property <string> active_badge: root.item_count > 0 ? root.get_item(root.active_index).badge : "";
+
+    property <int> auto_elapsed_ms: 0;
+    property <float> auto_progress: clamp(root.auto_elapsed_ms / 4500.0, 0.0, 1.0);
 
     function get_item(idx: int) -> FeaturedModCardData {
         if root.item_count <= 0 {
@@ -131,27 +141,33 @@ export component FeaturedCarousel {
 
     function next() {
         if root.item_count > 1 {
+            root.auto_elapsed_ms = 0;
             root.visual_progress = round(root.visual_progress) + 1.0;
         }
     }
 
     function prev() {
         if root.item_count > 1 {
+            root.auto_elapsed_ms = 0;
             root.visual_progress = round(root.visual_progress) - 1.0;
         }
     }
 
     function go_to(target: int) {
         if root.item_count > 1 {
+            root.auto_elapsed_ms = 0;
             root.visual_progress = round(root.visual_progress) + (target - root.active_index);
         }
     }
 
     auto_timer := Timer {
-        interval: 4500ms;
+        interval: 50ms;
         running: root.item_count > 1;
         triggered => {
-            root.next();
+            root.auto_elapsed_ms += 50;
+            if root.auto_elapsed_ms >= 4500 {
+                root.next();
+            }
         }
     }
 
@@ -168,7 +184,7 @@ export component FeaturedCarousel {
             }
 
             if root.item_count > 0 : MaterialText {
-                text: (root.active_index + 1) + " / " + root.item_count;
+                text: root.active_badge != "" ? root.active_badge : ((root.active_index + 1) + " / " + root.item_count);
                 style: Typography.label_medium;
                 color: MaterialPalette.on_surface_variant;
                 vertical_alignment: center;
@@ -267,7 +283,7 @@ export component FeaturedCarousel {
                 }
             }
 
-            // Carousel controls & expressive pill indicators
+            // Carousel controls & category-filtered expressive pill indicators (with progress fill)
             HorizontalLayout {
                 alignment: center;
                 spacing: 12px;
@@ -285,21 +301,28 @@ export component FeaturedCarousel {
                     alignment: center;
                     spacing: 6px;
 
-                    for item[idx] in root.items : VerticalLayout {
+                    for item[idx] in root.items : if root.active_badge == "" || item.badge == root.active_badge : VerticalLayout {
                         alignment: center;
 
                         Rectangle {
-                            width: idx == root.active_index ? 36px : 10px;
+                            width: idx == root.active_index ? 44px : 10px;
                             height: 10px;
                             border_radius: 5px;
-                            background: idx == root.active_index
-                                ? MaterialPalette.primary
-                                : MaterialPalette.surface_container_highest;
+                            background: MaterialPalette.surface_container_highest;
                             border_width: 1px;
                             border_color: MaterialPalette.outline_variant;
+                            clip: true;
 
                             animate width { duration: 300ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
-                            animate background { duration: 200ms; }
+
+                            if idx == root.active_index : Rectangle {
+                                x: 0px;
+                                y: 0px;
+                                width: parent.width * root.auto_progress;
+                                height: 100%;
+                                border_radius: 5px;
+                                background: MaterialPalette.primary;
+                            }
 
                             TouchArea {
                                 clicked => {
