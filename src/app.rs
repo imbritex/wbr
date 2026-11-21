@@ -45,7 +45,7 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
         .on_refresh_requested(move || {
             let weak = weak.clone();
             let state = state_clone.clone();
-            state.runtime.spawn(async move {
+            state.runtime.clone().spawn(async move {
                 let running = state.engines.detect_running_engines();
                 tracing::info!(running_count = running.len(), "Escaneo de engines completado");
                 let _ = slint::invoke_from_event_loop(move || {
@@ -65,7 +65,7 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
             let query = query.to_string();
             let weak = weak.clone();
             let state = state_clone.clone();
-            state.runtime.spawn(async move {
+            state.runtime.clone().spawn(async move {
                 tracing::info!(%query, "Buscando mods en GameBanana");
                 let _results = state.gamebanana.search_mods(&query).await;
                 let _ = slint::invoke_from_event_loop(move || {
@@ -123,7 +123,7 @@ fn load_featured_mods(window: &MainWindow, state: &AppState) {
     let weak = window.as_weak();
     let state = state.clone();
 
-    state.runtime.spawn(async move {
+    state.runtime.clone().spawn(async move {
         match state.gamebanana.fetch_featured_mods().await {
             Ok(mods) => {
                 let image_urls: Vec<(usize, String)> = mods
@@ -156,7 +156,7 @@ fn load_featured_mods(window: &MainWindow, state: &AppState) {
                 for (idx, url) in image_urls {
                     let gb = state.gamebanana.clone();
                     let weak_img = weak.clone();
-                    state.runtime.spawn(async move {
+                    state.runtime.clone().spawn(async move {
                         if let Some((w, h, rgba)) = gb.fetch_cover_rgba(&url).await {
                             let _ = slint::invoke_from_event_loop(move || {
                                 if let Some(win) = weak_img.upgrade() {
