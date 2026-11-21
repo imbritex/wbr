@@ -1,8 +1,8 @@
 [package]
-name = "wb-r"
-version = "0.1.0"
+name = "WeekBox"
+version = "3.0.0"
 edition = "2024"
-description = "WeekBox Rewritten in Rust + Slint (Material Design 3)"
+description = "WeekBox"
 build = "build.rs"
 
 [dependencies]
@@ -16,6 +16,8 @@ sysinfo = "0.33"
 anyhow = "1"
 thiserror = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+zip = { version = "2", default-features = false, features = ["deflate"] }
+chrono = { version = "0.4", features = ["clock"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

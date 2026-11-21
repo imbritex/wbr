@@ -1,175 +1,453 @@
 import {
     CircularProgressIndicator,
-    ElevatedCard,
-    FilledButton,
+    Icon,
+    IconButton,
     MaterialPalette,
     MaterialStyleMetrics,
     MaterialText,
+    OutlinedCard,
     ScrollView,
+    TextField,
     TonalButton,
     Typography,
 } from "@material";
-import { MainWindowAdapter, AppTab } from "../adapter.slint";
+import { MainWindowAdapter } from "../adapter.slint";
+import { EngineIcons, OutlinedIcons } from "../icons.slint";
 import { FeaturedCarousel } from "../components/featured_carousel.slint";
 import { ModGridCard } from "../components/mod_card.slint";
+import { Topbar, WbFilterChip } from "../components/topbar.slint";
 
 export component HomeView inherits Rectangle {
     background: MaterialPalette.background;
 
     property <bool> is_compact: root.width < 600px;
+    property <bool> filter_open: false;
 
-    ScrollView {
+    function section_title() -> string {
+        if MainWindowAdapter.home_search_query != "" {
+            return "Search Results for \"" + MainWindowAdapter.home_search_query + "\"";
+        }
+        if MainWindowAdapter.home_filter == "ripe" {
+            return "Popular - Most Liked Mods";
+        }
+        if MainWindowAdapter.home_filter == "popular" {
+            return "Trending Mods";
+        }
+        if MainWindowAdapter.home_filter == "new" {
+            return "Newest Releases";
+        }
+        if MainWindowAdapter.home_filter == "updated" {
+            return "Recently Updated Mods";
+        }
+        return "Mods";
+    }
+
+    VerticalLayout {
         width: 100%;
         height: 100%;
+        spacing: 0px;
 
-        VerticalLayout {
-            padding: MaterialStyleMetrics.padding_24;
-            spacing: MaterialStyleMetrics.spacing_16;
-            alignment: start;
+        Topbar {
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 10px;
 
-            FeaturedCarousel {
-                items: MainWindowAdapter.featured_mods;
-                loading: MainWindowAdapter.featured_loading;
-                compact: root.is_compact;
+                HorizontalLayout {
+                    spacing: 10px;
 
-                mod_clicked(id) => {
-                    MainWindowAdapter.featured_mod_clicked(id);
+                    VerticalLayout {
+                        alignment: center;
+
+                        IconButton {
+                            icon: OutlinedIcons.filter_list;
+                            checked: root.filter_open
+                                || MainWindowAdapter.home_filter != "ripe"
+                                || MainWindowAdapter.home_engine_filter != "all";
+                            tooltip: "Filters & Sort";
+
+                            clicked => {
+                                root.filter_open = !root.filter_open;
+                            }
+                        }
+                    }
+
+                    search_field := TextField {
+                        horizontal-stretch: 1;
+                        label: "Search mods on GameBanana...";
+                        placeholder_text: "Search mods on GameBanana...";
+                        leading_icon: OutlinedIcons.search;
+                        trailing_icon: OutlinedIcons.close;
+
+                        accepted(t) => {
+                            MainWindowAdapter.submit_home_search(t);
+                        }
+
+                        leading_icon_clicked => {
+                            MainWindowAdapter.submit_home_search(self.text);
+                        }
+
+                        trailing_icon_clicked => {
+                            self.text = "";
+                            MainWindowAdapter.clear_home_search();
+                        }
+                    }
+                }
+
+                if root.filter_open : VerticalLayout {
+                    spacing: 8px;
+                    padding_top: 4px;
+                    padding_bottom: 4px;
+
+                    // Sort filter chips
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            MaterialText {
+                                text: "Sort";
+                                style: Typography.label_medium;
+                                color: MaterialPalette.on_surface_variant;
+                            }
+                        }
+
+                        Flickable {
+                            horizontal-stretch: 1;
+                            height: 34px;
+                            viewport_width: max(self.width, sort_chips_row.preferred_width);
+                            viewport_height: 34px;
+
+                            sort_chips_row := HorizontalLayout {
+                                x: 0px;
+                                y: 1px;
+                                width: self.preferred_width;
+                                height: 32px;
+                                spacing: 8px;
+
+                                WbFilterChip {
+                                    text: "Most Liked";
+                                    selected: MainWindowAdapter.home_filter == "ripe";
+                                    clicked => { MainWindowAdapter.set_home_filter("ripe"); }
+                                }
+                                WbFilterChip {
+                                    text: "Trending";
+                                    selected: MainWindowAdapter.home_filter == "popular";
+                                    clicked => { MainWindowAdapter.set_home_filter("popular"); }
+                                }
+                                WbFilterChip {
+                                    text: "Newest";
+                                    selected: MainWindowAdapter.home_filter == "new";
+                                    clicked => { MainWindowAdapter.set_home_filter("new"); }
+                                }
+                                WbFilterChip {
+                                    text: "Updated";
+                                    selected: MainWindowAdapter.home_filter == "updated";
+                                    clicked => { MainWindowAdapter.set_home_filter("updated"); }
+                                }
+                            }
+                        }
+                    }
+
+                    // Engine filter chips
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            MaterialText {
+                                text: "Engine";
+                                style: Typography.label_medium;
+                                color: MaterialPalette.on_surface_variant;
+                            }
+                        }
+
+                        Flickable {
+                            horizontal-stretch: 1;
+                            height: 34px;
+                            viewport_width: max(self.width, engine_chips_row.preferred_width);
+                            viewport_height: 34px;
+
+                            engine_chips_row := HorizontalLayout {
+                                x: 0px;
+                                y: 1px;
+                                width: self.preferred_width;
+                                height: 32px;
+                                spacing: 8px;
+
+                                WbFilterChip {
+                                    text: "All";
+                                    selected: MainWindowAdapter.home_engine_filter == "all";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("all"); }
+                                }
+                                WbFilterChip {
+                                    text: "Psych";
+                                    icon: EngineIcons.psych;
+                                    has_icon: true;
+                                    selected: MainWindowAdapter.home_engine_filter == "psych";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("psych"); }
+                                }
+                                WbFilterChip {
+                                    text: "Codename";
+                                    icon: EngineIcons.codename;
+                                    has_icon: true;
+                                    selected: MainWindowAdapter.home_engine_filter == "codename";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("codename"); }
+                                }
+                                WbFilterChip {
+                                    text: "V-Slice";
+                                    icon: EngineIcons.vslice;
+                                    has_icon: true;
+                                    selected: MainWindowAdapter.home_engine_filter == "vslice";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("vslice"); }
+                                }
+                                WbFilterChip {
+                                    text: "P-Slice";
+                                    icon: EngineIcons.pslice;
+                                    has_icon: true;
+                                    selected: MainWindowAdapter.home_engine_filter == "pslice";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("pslice"); }
+                                }
+                                WbFilterChip {
+                                    text: "FPS Plus";
+                                    icon: EngineIcons.fpsplus;
+                                    has_icon: true;
+                                    selected: MainWindowAdapter.home_engine_filter == "fpsplus";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("fpsplus"); }
+                                }
+                                WbFilterChip {
+                                    text: "Psych Online";
+                                    icon: EngineIcons.psychonline;
+                                    has_icon: true;
+                                    selected: MainWindowAdapter.home_engine_filter == "psychonline";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("psychonline"); }
+                                }
+                                WbFilterChip {
+                                    text: "Executable";
+                                    icon: EngineIcons.executable;
+                                    has_icon: true;
+                                    selected: MainWindowAdapter.home_engine_filter == "executable";
+                                    clicked => { MainWindowAdapter.set_home_engine_filter("executable"); }
+                                }
+                            }
+                        }
+                    }
                 }
             }
+        }
 
-            // Popular - Most Liked Mods Section (from wb-rew ModsGridSection)
-            MaterialText {
-                text: "Popular - Most Liked Mods";
-                style: Typography.title_large;
-                color: MaterialPalette.on_background;
-            }
+        home_scroll := ScrollView {
+            vertical-stretch: 1;
 
-            if MainWindowAdapter.home_mods_loading && MainWindowAdapter.home_mods.length == 0 : HorizontalLayout {
-                alignment: center;
-                padding: 24px;
-                spacing: 12px;
+            VerticalLayout {
+                width: home_scroll.visible_width;
+                padding: root.is_compact ? MaterialStyleMetrics.padding_16 : MaterialStyleMetrics.padding_24;
+                spacing: MaterialStyleMetrics.spacing_16;
+                alignment: start;
 
-                CircularProgressIndicator {
-                    indeterminate: true;
-                    width: 24px;
-                    height: 24px;
+                if MainWindowAdapter.home_search_query == "" : FeaturedCarousel {
+                    items: MainWindowAdapter.featured_mods;
+                    loading: MainWindowAdapter.featured_loading;
+                    compact: root.is_compact;
+
+                    mod_clicked(id) => {
+                        MainWindowAdapter.open_mod_details(id);
+                    }
                 }
 
                 MaterialText {
-                    text: "Cargando mods populares de GameBanana...";
-                    style: Typography.body_medium;
-                    color: MaterialPalette.on_surface_variant;
-                    vertical_alignment: center;
+                    text: root.section_title();
+                    style: Typography.title_large;
+                    font_weight: 700;
+                    color: MaterialPalette.on_background;
+                    overflow: elide;
                 }
-            }
 
-            // Responsive Mods Grid (1 / 2 / 3 / 4 columns)
-            grid_container := Rectangle {
-                width: 100%;
-                property <int> cols: root.width >= 1160px ? 4 : root.width >= 820px ? 3 : root.width >= 500px ? 2 : 1;
-                property <length> gap: 14px;
-                property <length> card_width: (self.width - (self.cols - 1) * self.gap) / self.cols;
-                property <length> card_height: self.card_width * 9 / 16 + 108px;
-                property <int> rows: MainWindowAdapter.home_mods.length > 0
-                    ? floor((MainWindowAdapter.home_mods.length + self.cols - 1) / self.cols)
-                    : 0;
-
-                height: self.rows > 0 ? self.rows * self.card_height + (self.rows - 1) * self.gap : 0px;
-
-                for mod_item[idx] in MainWindowAdapter.home_mods : ModGridCard {
-                    x: mod(idx, grid_container.cols) * (grid_container.card_width + grid_container.gap);
-                    y: floor(idx / grid_container.cols) * (grid_container.card_height + grid_container.gap);
-                    width: grid_container.card_width;
-                    height: grid_container.card_height;
-                    item: mod_item;
-
-                    clicked(id) => {
-                        MainWindowAdapter.home_mod_clicked(id);
-                    }
-                }
-            }
-
-            // Pagination Footer (from wb-rew ModsPaginationFooter)
-            HorizontalLayout {
-                alignment: center;
-                padding_top: 12px;
-                padding_bottom: 24px;
-                spacing: 12px;
-
-                if MainWindowAdapter.home_mods_loading_more : HorizontalLayout {
-                    spacing: 10px;
+                if MainWindowAdapter.home_mods_loading && MainWindowAdapter.home_mods.length == 0 : HorizontalLayout {
                     alignment: center;
+                    padding: 24px;
+                    spacing: 12px;
 
                     CircularProgressIndicator {
                         indeterminate: true;
-                        width: 24px;
-                        height: 24px;
                     }
 
                     MaterialText {
-                        text: "Loading more mods...";
-                        style: Typography.label_large;
-                        color: MaterialPalette.primary;
+                        text: "Loading mods from GameBanana...";
+                        style: Typography.body_medium;
+                        color: MaterialPalette.on_surface_variant;
                         vertical_alignment: center;
                     }
                 }
 
-                if !MainWindowAdapter.home_mods_loading_more && MainWindowAdapter.home_mods_has_more && MainWindowAdapter.home_mods.length > 0 : TonalButton {
-                    text: "Cargar más mods";
-                    clicked => {
-                        MainWindowAdapter.load_more_home_mods();
-                    }
-                }
-
-                if !MainWindowAdapter.home_mods_loading_more && !MainWindowAdapter.home_mods_has_more && MainWindowAdapter.home_mods.length > 0 : MaterialText {
-                    text: "You've reached the end of the collection.";
-                    style: Typography.body_small;
-                    color: MaterialPalette.on_surface_variant;
-                    opacity: 0.65;
-                }
-            }
-
-            ElevatedCard {
-                VerticalLayout {
-                    padding: MaterialStyleMetrics.padding_16;
-                    spacing: MaterialStyleMetrics.spacing_12;
-
-                    MaterialText {
-                        text: "Estado del sistema";
-                        style: Typography.title_medium;
-                        color: MaterialPalette.on_surface;
-                    }
-
-                    MaterialText {
-                        text: "Biblioteca: " + MainWindowAdapter.library_path;
-                        style: Typography.body_medium;
-                        color: MaterialPalette.on_surface_variant;
-                        wrap: word_wrap;
-                    }
-
-                    MaterialText {
-                        text: "Estado: " + MainWindowAdapter.status_message;
-                        style: Typography.body_medium;
-                        color: MaterialPalette.primary;
-                    }
-
+                if !MainWindowAdapter.home_mods_loading && MainWindowAdapter.home_mods_error != "" && MainWindowAdapter.home_mods.length == 0 : OutlinedCard {
                     HorizontalLayout {
+                        padding: MaterialStyleMetrics.padding_20;
+                        spacing: MaterialStyleMetrics.spacing_16;
+                        alignment: space-between;
+
+                        HorizontalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 12px;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    width: 24px;
+                                    source: OutlinedIcons.warning;
+                                    colorize: MaterialPalette.error;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: 4px;
+
+                                MaterialText {
+                                    text: "Failed to load mods";
+                                    style: Typography.title_medium;
+                                    color: MaterialPalette.on_surface;
+                                }
+
+                                MaterialText {
+                                    text: MainWindowAdapter.home_mods_error;
+                                    style: Typography.body_small;
+                                    color: MaterialPalette.on_surface_variant;
+                                    wrap: word_wrap;
+                                }
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+
+                            TonalButton {
+                                text: "Retry";
+                                icon: OutlinedIcons.refresh;
+                                clicked => {
+                                    MainWindowAdapter.retry_home_mods();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !MainWindowAdapter.home_mods_loading && MainWindowAdapter.home_mods_error == "" && MainWindowAdapter.home_mods.length == 0 : OutlinedCard {
+                    HorizontalLayout {
+                        padding: MaterialStyleMetrics.padding_20;
                         spacing: MaterialStyleMetrics.spacing_12;
-                        alignment: start;
+                        alignment: space-between;
 
-                        FilledButton {
-                            text: "Escanear engines";
-                            clicked => {
-                                MainWindowAdapter.refresh_requested();
+                        HorizontalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 12px;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    width: 24px;
+                                    source: OutlinedIcons.search;
+                                    colorize: MaterialPalette.on_surface_variant;
+                                }
+                            }
+
+                            VerticalLayout {
+                                horizontal-stretch: 1;
+                                spacing: 2px;
+
+                                MaterialText {
+                                    text: "No mods found";
+                                    style: Typography.title_medium;
+                                    color: MaterialPalette.on_surface;
+                                }
+
+                                MaterialText {
+                                    text: "Try adjusting your search query or engine filters.";
+                                    style: Typography.body_small;
+                                    color: MaterialPalette.on_surface_variant;
+                                    wrap: word_wrap;
+                                }
                             }
                         }
 
-                        TonalButton {
-                            text: "Explorar Biblioteca";
-                            clicked => {
-                                MainWindowAdapter.active_tab = AppTab.library;
+                        if MainWindowAdapter.home_search_query != "" || MainWindowAdapter.home_engine_filter != "all" : VerticalLayout {
+                            alignment: center;
+                            TonalButton {
+                                text: "Reset";
+                                clicked => {
+                                    search_field.text = "";
+                                    MainWindowAdapter.clear_home_search();
+                                    MainWindowAdapter.set_home_engine_filter("all");
+                                }
                             }
                         }
+                    }
+                }
+
+                // Responsive Multi-Column Mods Grid (1 / 2 / 3 / 4 / 5 columns)
+                grid_container := Rectangle {
+                    width: 100%;
+                    property <int> cols: root.width >= 1360px ? 5 : root.width >= 1060px ? 4 : root.width >= 780px ? 3 : root.width >= 500px ? 2 : 1;
+                    property <length> gap: 16px;
+                    property <length> card_width: (self.width - (self.cols - 1) * self.gap) / self.cols;
+                    property <length> card_height: self.card_width * 9 / 16 + 132px;
+                    property <int> grid_rows: MainWindowAdapter.home_mods.length > 0
+                        ? floor((MainWindowAdapter.home_mods.length + self.cols - 1) / self.cols)
+                        : 0;
+
+                    height: self.grid_rows > 0 ? self.grid_rows * self.card_height + (self.grid_rows - 1) * self.gap : 0px;
+
+                    for mod_item[idx] in MainWindowAdapter.home_mods : ModGridCard {
+                        x: mod(idx, grid_container.cols) * (grid_container.card_width + grid_container.gap);
+                        y: floor(idx / grid_container.cols) * (grid_container.card_height + grid_container.gap);
+                        width: grid_container.card_width;
+                        height: grid_container.card_height;
+                        item: mod_item;
+
+                        clicked(id) => {
+                            MainWindowAdapter.open_mod_details(id);
+                        }
+
+                        favorite_clicked(id) => {
+                            MainWindowAdapter.toggle_mod_favorite(id);
+                        }
+                    }
+                }
+
+                // ModsPaginationFooter
+                HorizontalLayout {
+                    alignment: center;
+                    padding_top: 8px;
+                    padding_bottom: 24px;
+                    spacing: 12px;
+
+                    if MainWindowAdapter.home_mods_loading_more : HorizontalLayout {
+                        spacing: 10px;
+                        alignment: center;
+
+                        CircularProgressIndicator {
+                            indeterminate: true;
+                        }
+
+                        MaterialText {
+                            text: "Loading more mods...";
+                            style: Typography.label_large;
+                            color: MaterialPalette.primary;
+                            vertical_alignment: center;
+                        }
+                    }
+
+                    if !MainWindowAdapter.home_mods_loading_more && MainWindowAdapter.home_mods_has_more && MainWindowAdapter.home_mods.length > 0 : TonalButton {
+                        text: "Load more mods";
+                        clicked => {
+                            MainWindowAdapter.load_more_home_mods();
+                        }
+                    }
+
+                    if !MainWindowAdapter.home_mods_loading_more && !MainWindowAdapter.home_mods_has_more && MainWindowAdapter.home_mods.length > 0 : MaterialText {
+                        text: "You've reached the end of the collection.";
+                        style: Typography.body_small;
+                        color: MaterialPalette.on_surface_variant;
+                        opacity: 0.65;
                     }
                 }
             }

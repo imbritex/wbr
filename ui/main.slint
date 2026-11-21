@@ -1,3 +1,4 @@
+import { Palette } from "std-widgets.slint";
 import {
     MaterialPalette,
     MaterialWindow,
@@ -6,6 +7,15 @@ import {
 import { AppTab, MainWindowAdapter } from "./adapter.slint";
 import { FilledIcons, OutlinedIcons } from "./icons.slint";
 import { DesktopSidebar, MobileBottomNav } from "./components/sidebar.slint";
+import { ModDetailsModal } from "./components/mod_details_modal.slint";
+import { SettingsModal } from "./components/settings_modal.slint";
+import { AboutModal } from "./components/about_modal.slint";
+import {
+    CalloutToast,
+    ConfirmDialog,
+    CreateProfileDialog,
+    NewsMediaModal,
+} from "./components/dialogs.slint";
 import { HomeView } from "./views/home_view.slint";
 import { LibraryView } from "./views/library_view.slint";
 import { InstancesView } from "./views/instances_view.slint";
@@ -15,13 +25,22 @@ export { MainWindowAdapter }
 
 export component MainWindow inherits MaterialWindow {
     title: "WeekBox (wb-r)";
-    preferred-width: 1080px;
-    preferred-height: 700px;
+    preferred-width: 1120px;
+    preferred-height: 740px;
     min-width: 420px;
     min-height: 500px;
     background: MaterialPalette.background;
 
     property <bool> compact_layout: root.width < 760px;
+    property <bool> is_dark: MainWindowAdapter.dark_mode;
+
+    init => {
+        Palette.color_scheme = MainWindowAdapter.dark_mode ? ColorScheme.dark : ColorScheme.light;
+    }
+
+    changed is_dark => {
+        Palette.color_scheme = root.is_dark ? ColorScheme.dark : ColorScheme.light;
+    }
 
     property <[NavigationItem]> nav_items: [
         {
@@ -155,4 +174,13 @@ export component MainWindow inherits MaterialWindow {
             }
         }
     }
+
+    // Top-level modals & notifications
+    ModDetailsModal {}
+    SettingsModal {}
+    AboutModal {}
+    CreateProfileDialog {}
+    ConfirmDialog {}
+    NewsMediaModal {}
+    CalloutToast {}
 }

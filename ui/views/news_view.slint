@@ -1,48 +1,671 @@
 import {
-    ElevatedCard,
+    CircularProgressIndicator,
+    FilledButton,
+    HorizontalDivider,
+    Icon,
+    IconButton,
     MaterialPalette,
     MaterialStyleMetrics,
     MaterialText,
+    ScrollView,
+    StateLayer,
+    TonalButton,
     Typography,
 } from "@material";
-import { MainWindowAdapter } from "../adapter.slint";
+import { MainWindowAdapter, NewsPostData } from "../adapter.slint";
+import { FilledIcons, OutlinedIcons } from "../icons.slint";
+
+component FilterPill {
+    in property <string> text;
+    in property <bool> active: false;
+    in property <bool> enabled: true;
+
+    callback clicked();
+
+    height: 32px;
+
+    Rectangle {
+        border_radius: 8px;
+        background: root.active ? MaterialPalette.secondary_container : transparent;
+        border_width: root.active ? 0px : 1px;
+        border_color: MaterialPalette.outline_variant;
+        opacity: root.enabled ? 1.0 : 0.45;
+        clip: true;
+
+        animate background { duration: 150ms; }
+
+        StateLayer {
+            width: 100%;
+            height: 100%;
+            border_radius: 8px;
+            background: root.active ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+            enabled: root.enabled;
+            has_hover: touch.has_hover;
+            pressed: touch.pressed;
+        }
+
+        touch := TouchArea {
+            enabled: root.enabled;
+            clicked => {
+                root.clicked();
+            }
+        }
+
+        HorizontalLayout {
+            padding_left: 14px;
+            padding_right: 14px;
+            alignment: center;
+
+            MaterialText {
+                text: root.text;
+                style: Typography.label_large;
+                color: root.active ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+                vertical_alignment: center;
+                overflow: clip;
+            }
+        }
+    }
+}
+
+component PostStatItem {
+    in property <image> icon;
+    in property <string> count;
+
+    HorizontalLayout {
+        spacing: 4px;
+
+        VerticalLayout {
+            alignment: center;
+            Icon {
+                width: 15px;
+                height: 15px;
+                source: root.icon;
+                colorize: MaterialPalette.on_surface_variant;
+            }
+        }
+
+        MaterialText {
+            text: root.count != "" ? root.count : "0";
+            style: Typography.label_small;
+            color: MaterialPalette.on_surface_variant;
+            vertical_alignment: center;
+        }
+    }
+}
+
+component NewsPostCard {
+    in property <NewsPostData> post;
+
+    callback open_url(url: string);
+    callback open_media(post_id: string);
+
+    Rectangle {
+        width: 100%;
+        border_radius: 16px;
+        background: MaterialPalette.surface_container_low;
+        border_width: 1px;
+        border_color: MaterialPalette.outline_variant;
+        clip: true;
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 10px;
+
+            // Optional repost line
+            if root.post.is_repost || root.post.reposted_by != "" : HorizontalLayout {
+                spacing: 6px;
+
+                VerticalLayout {
+                    alignment: center;
+                    Icon {
+                        width: 14px;
+                        height: 14px;
+                        source: OutlinedIcons.repeat;
+                        colorize: MaterialPalette.primary;
+                    }
+                }
+
+                MaterialText {
+                    horizontal-stretch: 1;
+                    text: root.post.reposted_by != ""
+                        ? ("Reposted by " + root.post.reposted_by)
+                        : "Reposted";
+                    style: Typography.label_small;
+                    color: MaterialPalette.primary;
+                    overflow: elide;
+                    vertical_alignment: center;
+                }
+            }
+
+            // Author header
+            HorizontalLayout {
+                spacing: 8px;
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+
+                    MaterialText {
+                        text: root.post.author_name != "" ? root.post.author_name : root.post.source_name;
+                        style: Typography.title_small;
+                        font_weight: 700;
+                        color: MaterialPalette.on_surface;
+                        overflow: elide;
+                    }
+
+                    MaterialText {
+                        text: "@" + root.post.author_handle + (root.post.time_label != "" ? (" · " + root.post.time_label) : "");
+                        style: Typography.body_small;
+                        color: MaterialPalette.on_surface_variant;
+                        overflow: elide;
+                    }
+                }
+
+                if root.post.url != "" : VerticalLayout {
+                    alignment: center;
+                    IconButton {
+                        icon: OutlinedIcons.open_in_new;
+                        inline: true;
+                        tooltip: "Open in browser";
+                        clicked => {
+                            root.open_url(root.post.url);
+                        }
+                    }
+                }
+            }
+
+            // Post body text
+            if root.post.text != "" : MaterialText {
+                text: root.post.text;
+                style: Typography.body_medium;
+                color: MaterialPalette.on_surface;
+                wrap: word_wrap;
+            }
+
+            // Optional photo attachment
+            if root.post.has_photo : Rectangle {
+                width: 100%;
+                height: 180px;
+                border_radius: 12px;
+                background: MaterialPalette.surface_container_highest;
+                border_width: 1px;
+                border_color: MaterialPalette.outline_variant;
+                clip: true;
+
+                Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.post.photo;
+                    image-fit: cover;
+                }
+
+                if root.post.has_video : Rectangle {
+                    x: 10px;
+                    y: parent.height - self.height - 10px;
+                    height: 26px;
+                    border_radius: 13px;
+                    background: #000000AA;
+
+                    HorizontalLayout {
+                        padding_left: 8px;
+                        padding_right: 10px;
+                        spacing: 4px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 14px;
+                                height: 14px;
+                                source: FilledIcons.play_arrow;
+                                colorize: #FFFFFF;
+                            }
+                        }
+
+                        MaterialText {
+                            text: "Video";
+                            style: Typography.label_small;
+                            color: #FFFFFF;
+                            vertical_alignment: center;
+                        }
+                    }
+                }
+
+                TouchArea {
+                    clicked => {
+                        root.open_media(root.post.id);
+                    }
+                }
+            }
+
+            // Optional quote box
+            if root.post.quote_text != "" : Rectangle {
+                width: 100%;
+                border_radius: 12px;
+                background: MaterialPalette.surface_container;
+                border_width: 1px;
+                border_color: MaterialPalette.outline_variant;
+
+                VerticalLayout {
+                    padding: 10px;
+                    spacing: 4px;
+
+                    if root.post.quote_author != "" : MaterialText {
+                        text: root.post.quote_author;
+                        style: Typography.label_medium;
+                        color: MaterialPalette.primary;
+                        overflow: elide;
+                    }
+
+                    MaterialText {
+                        text: root.post.quote_text;
+                        style: Typography.body_small;
+                        color: MaterialPalette.on_surface_variant;
+                        wrap: word_wrap;
+                    }
+                }
+            }
+
+            HorizontalDivider {}
+
+            // Stats footer
+            HorizontalLayout {
+                alignment: space_between;
+                spacing: 8px;
+
+                PostStatItem {
+                    icon: OutlinedIcons.favorite;
+                    count: root.post.likes_label;
+                }
+
+                PostStatItem {
+                    icon: OutlinedIcons.repeat;
+                    count: root.post.reposts_label;
+                }
+
+                PostStatItem {
+                    icon: OutlinedIcons.chat_bubble;
+                    count: root.post.replies_label;
+                }
+
+                PostStatItem {
+                    icon: OutlinedIcons.visibility;
+                    count: root.post.views_label;
+                }
+            }
+        }
+    }
+}
 
 export component NewsView inherits Rectangle {
     background: MaterialPalette.background;
 
-    VerticalLayout {
-        padding: MaterialStyleMetrics.padding_24;
-        spacing: MaterialStyleMetrics.spacing_16;
-        alignment: start;
+    property <int> news_cols: root.width >= 1160px ? 3 : root.width >= 720px ? 2 : 1;
+    property <length> news_col_gap: 14px;
+    property <length> news_avail_width: max(1px, scroll.visible_width - 48px);
+    property <length> news_col_width: max(1px, (root.news_avail_width - (root.news_cols - 1) * root.news_col_gap) / root.news_cols);
 
-        MaterialText {
-            text: "Noticias y Lanzamientos";
-            style: Typography.headline_small;
-            color: MaterialPalette.on_background;
+    VerticalLayout {
+        spacing: 0px;
+
+        // Top header with title, subtitle, refresh button, and source filter chips
+        Rectangle {
+            width: 100%;
+            background: MaterialPalette.surface_container_lowest;
+
+            VerticalLayout {
+                VerticalLayout {
+                    padding_left: MaterialStyleMetrics.padding_24;
+                    padding_right: MaterialStyleMetrics.padding_24;
+                    padding_top: 16px;
+                    padding_bottom: 12px;
+                    spacing: 12px;
+
+                    HorizontalLayout {
+                        spacing: 12px;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+
+                            MaterialText {
+                                text: "News";
+                                style: Typography.headline_small;
+                                color: MaterialPalette.on_surface;
+                            }
+
+                            MaterialText {
+                                text: MainWindowAdapter.news_selected_account != ""
+                                    ? ("Showing posts from @" + MainWindowAdapter.news_selected_account)
+                                    : "Latest updates from the FNF community";
+                                style: Typography.body_medium;
+                                color: MaterialPalette.on_surface_variant;
+                                overflow: elide;
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+
+                            IconButton {
+                                icon: OutlinedIcons.refresh;
+                                tooltip: "Refresh news";
+                                enabled: !MainWindowAdapter.news_loading;
+                                clicked => {
+                                    MainWindowAdapter.refresh_news();
+                                }
+                            }
+                        }
+                    }
+
+                    // Horizontal filter chips row
+                    Flickable {
+                        width: 100%;
+                        height: 32px;
+                        viewport-width: sources_row.preferred-width;
+                        viewport-height: 32px;
+                        interactive: self.viewport-width > self.width;
+
+                        sources_row := HorizontalLayout {
+                            height: 32px;
+                            spacing: 8px;
+                            alignment: start;
+
+                            FilterPill {
+                                text: "All";
+                                active: MainWindowAdapter.news_selected_account == "";
+                                clicked => {
+                                    MainWindowAdapter.select_news_account("");
+                                }
+                            }
+
+                            for src in MainWindowAdapter.news_sources : FilterPill {
+                                text: src.name != "" ? src.name : ("@" + src.username);
+                                active: MainWindowAdapter.news_selected_account == src.username;
+                                enabled: src.available;
+                                clicked => {
+                                    MainWindowAdapter.select_news_account(src.username);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider {}
+            }
         }
 
-        for item in MainWindowAdapter.news : ElevatedCard {
+        // Scrollable posts area
+        scroll := ScrollView {
+            vertical-stretch: 1;
+            horizontal_scrollbar_policy: ScrollBarPolicy.always_off;
+
             VerticalLayout {
-                padding: MaterialStyleMetrics.padding_16;
-                spacing: MaterialStyleMetrics.spacing_8;
+                width: scroll.visible_width;
+                padding: MaterialStyleMetrics.padding_24;
+                spacing: MaterialStyleMetrics.spacing_16;
+                alignment: start;
 
-                MaterialText {
-                    text: item.title;
-                    style: Typography.title_medium;
-                    color: MaterialPalette.on_surface;
+                // Initial loading spinner
+                if MainWindowAdapter.news_loading && MainWindowAdapter.news_posts.length == 0 : HorizontalLayout {
+                    alignment: center;
+                    padding: 36px;
+                    spacing: 12px;
+
+                    CircularProgressIndicator {
+                        indeterminate: true;
+                    }
+
+                    MaterialText {
+                        text: "Loading community news...";
+                        style: Typography.body_medium;
+                        color: MaterialPalette.on_surface_variant;
+                        vertical_alignment: center;
+                    }
                 }
 
-                MaterialText {
-                    text: item.source;
-                    style: Typography.label_medium;
-                    color: MaterialPalette.primary;
+                // Error card with Try again button
+                if MainWindowAdapter.news_error != "" && MainWindowAdapter.news_posts.length == 0 : Rectangle {
+                    width: 100%;
+                    border_radius: 16px;
+                    background: MaterialPalette.error_container;
+                    border_width: 1px;
+                    border_color: MaterialPalette.error;
+
+                    VerticalLayout {
+                        padding: 24px;
+                        spacing: 12px;
+                        alignment: center;
+
+                        HorizontalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 28px;
+                                height: 28px;
+                                source: OutlinedIcons.warning;
+                                colorize: MaterialPalette.on_error_container;
+                            }
+                        }
+
+                        MaterialText {
+                            text: "Could not load news";
+                            style: Typography.title_medium;
+                            color: MaterialPalette.on_error_container;
+                            horizontal_alignment: center;
+                        }
+
+                        MaterialText {
+                            text: MainWindowAdapter.news_error;
+                            style: Typography.body_medium;
+                            color: MaterialPalette.on_error_container;
+                            horizontal_alignment: center;
+                            wrap: word_wrap;
+                        }
+
+                        HorizontalLayout {
+                            alignment: center;
+                            padding_top: 4px;
+
+                            FilledButton {
+                                icon: OutlinedIcons.refresh;
+                                text: "Try again";
+                                clicked => {
+                                    MainWindowAdapter.refresh_news();
+                                }
+                            }
+                        }
+                    }
                 }
 
-                MaterialText {
-                    text: item.summary;
-                    style: Typography.body_medium;
-                    color: MaterialPalette.on_surface_variant;
-                    wrap: word_wrap;
+                // Empty state when no posts and no error
+                if !MainWindowAdapter.news_loading && MainWindowAdapter.news_error == "" && MainWindowAdapter.news_posts.length == 0 : Rectangle {
+                    width: 100%;
+                    border_radius: 16px;
+                    background: MaterialPalette.surface_container_low;
+                    border_width: 1px;
+                    border_color: MaterialPalette.outline_variant;
+
+                    VerticalLayout {
+                        padding: 32px;
+                        spacing: 12px;
+                        alignment: center;
+
+                        HorizontalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 32px;
+                                height: 32px;
+                                source: OutlinedIcons.feed;
+                                colorize: MaterialPalette.primary;
+                            }
+                        }
+
+                        MaterialText {
+                            text: "No posts available";
+                            style: Typography.title_medium;
+                            color: MaterialPalette.on_surface;
+                            horizontal_alignment: center;
+                        }
+
+                        HorizontalLayout {
+                            alignment: center;
+
+                            TonalButton {
+                                icon: OutlinedIcons.refresh;
+                                text: "Refresh";
+                                clicked => {
+                                    MainWindowAdapter.refresh_news();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Responsive 1 / 2 / 3 column masonry grid of NewsPostCards
+                if MainWindowAdapter.news_posts.length > 0 && root.news_cols == 1 : VerticalLayout {
+                    width: 100%;
+                    spacing: root.news_col_gap;
+                    alignment: start;
+
+                    for post in MainWindowAdapter.news_posts : NewsPostCard {
+                        post: post;
+                        open_url(url) => { MainWindowAdapter.open_external_url(url); }
+                        open_media(pid) => { MainWindowAdapter.open_news_media(pid); }
+                    }
+                }
+
+                if MainWindowAdapter.news_posts.length > 0 && root.news_cols == 2 : HorizontalLayout {
+                    width: 100%;
+                    spacing: root.news_col_gap;
+                    alignment: start;
+
+                    VerticalLayout {
+                        width: root.news_col_width;
+                        spacing: 0px;
+                        alignment: start;
+
+                        for post[idx] in MainWindowAdapter.news_posts : VerticalLayout {
+                            if mod(idx, 2) == 0 : VerticalLayout {
+                                padding_bottom: root.news_col_gap;
+                                NewsPostCard {
+                                    post: post;
+                                    open_url(url) => { MainWindowAdapter.open_external_url(url); }
+                                    open_media(pid) => { MainWindowAdapter.open_news_media(pid); }
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        width: root.news_col_width;
+                        spacing: 0px;
+                        alignment: start;
+
+                        for post[idx] in MainWindowAdapter.news_posts : VerticalLayout {
+                            if mod(idx, 2) == 1 : VerticalLayout {
+                                padding_bottom: root.news_col_gap;
+                                NewsPostCard {
+                                    post: post;
+                                    open_url(url) => { MainWindowAdapter.open_external_url(url); }
+                                    open_media(pid) => { MainWindowAdapter.open_news_media(pid); }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if MainWindowAdapter.news_posts.length > 0 && root.news_cols == 3 : HorizontalLayout {
+                    width: 100%;
+                    spacing: root.news_col_gap;
+                    alignment: start;
+
+                    VerticalLayout {
+                        width: root.news_col_width;
+                        spacing: 0px;
+                        alignment: start;
+
+                        for post[idx] in MainWindowAdapter.news_posts : VerticalLayout {
+                            if mod(idx, 3) == 0 : VerticalLayout {
+                                padding_bottom: root.news_col_gap;
+                                NewsPostCard {
+                                    post: post;
+                                    open_url(url) => { MainWindowAdapter.open_external_url(url); }
+                                    open_media(pid) => { MainWindowAdapter.open_news_media(pid); }
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        width: root.news_col_width;
+                        spacing: 0px;
+                        alignment: start;
+
+                        for post[idx] in MainWindowAdapter.news_posts : VerticalLayout {
+                            if mod(idx, 3) == 1 : VerticalLayout {
+                                padding_bottom: root.news_col_gap;
+                                NewsPostCard {
+                                    post: post;
+                                    open_url(url) => { MainWindowAdapter.open_external_url(url); }
+                                    open_media(pid) => { MainWindowAdapter.open_news_media(pid); }
+                                }
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        width: root.news_col_width;
+                        spacing: 0px;
+                        alignment: start;
+
+                        for post[idx] in MainWindowAdapter.news_posts : VerticalLayout {
+                            if mod(idx, 3) == 2 : VerticalLayout {
+                                padding_bottom: root.news_col_gap;
+                                NewsPostCard {
+                                    post: post;
+                                    open_url(url) => { MainWindowAdapter.open_external_url(url); }
+                                    open_media(pid) => { MainWindowAdapter.open_news_media(pid); }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Bottom Load more / loading more footer
+                if MainWindowAdapter.news_posts.length > 0 : HorizontalLayout {
+                    alignment: center;
+                    padding_top: 8px;
+                    padding_bottom: 16px;
+                    spacing: 12px;
+
+                    if MainWindowAdapter.news_loading_more : HorizontalLayout {
+                        spacing: 10px;
+                        alignment: center;
+
+                        CircularProgressIndicator {
+                            indeterminate: true;
+                        }
+
+                        MaterialText {
+                            text: "Loading more posts...";
+                            style: Typography.label_large;
+                            color: MaterialPalette.primary;
+                            vertical_alignment: center;
+                        }
+                    }
+
+                    if !MainWindowAdapter.news_loading_more && MainWindowAdapter.news_has_more : TonalButton {
+                        text: "Load more";
+                        clicked => {
+                            MainWindowAdapter.load_more_news();
+                        }
+                    }
+
+                    if !MainWindowAdapter.news_loading_more && !MainWindowAdapter.news_has_more : MaterialText {
+                        text: "You've reached the end of the feed.";
+                        style: Typography.body_small;
+                        color: MaterialPalette.on_surface_variant;
+                        opacity: 0.65;
+                    }
                 }
             }
         }

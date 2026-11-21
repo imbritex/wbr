@@ -1,66 +1,1110 @@
 import {
-    ElevatedCard,
+    CircularProgressIndicator,
     FilledButton,
+    HorizontalDivider,
+    Icon,
+    LinearProgressIndicator,
     MaterialPalette,
     MaterialStyleMetrics,
     MaterialText,
+    OutlineButton,
+    ScrollView,
+    StateLayer,
+    TextButton,
     TonalButton,
     Typography,
 } from "@material";
-import { MainWindowAdapter } from "../adapter.slint";
+import { EngineOptionData, EngineReleaseData, MainWindowAdapter } from "../adapter.slint";
+import { AppAssets, EngineIcons, FilledIcons, OutlinedIcons } from "../icons.slint";
+
+component FilterPill {
+    in property <string> text;
+    in property <bool> active: false;
+    in property <image> icon;
+    in property <bool> colorize_icon: false;
+    in property <int> badge_count: -1;
+
+    callback clicked();
+
+    property <bool> has_icon: root.icon.width > 0 && root.icon.height > 0;
+
+    height: 36px;
+
+    Rectangle {
+        border_radius: 18px;
+        background: root.active ? MaterialPalette.secondary_container : MaterialPalette.surface_container_high;
+        border_width: 1px;
+        border_color: root.active ? MaterialPalette.primary : MaterialPalette.outline_variant;
+        clip: true;
+
+        animate background { duration: 150ms; }
+        animate border_color { duration: 150ms; }
+
+        StateLayer {
+            width: 100%;
+            height: 100%;
+            border_radius: 18px;
+            background: root.active ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+            enabled: true;
+            has_hover: touch.has_hover;
+            pressed: touch.pressed;
+        }
+
+        touch := TouchArea {
+            clicked => {
+                root.clicked();
+            }
+        }
+
+        HorizontalLayout {
+            padding_left: 12px;
+            padding_right: root.badge_count >= 0 ? 8px : 14px;
+            spacing: 8px;
+            alignment: center;
+
+            if root.has_icon && !root.colorize_icon : VerticalLayout {
+                alignment: center;
+                Image {
+                    width: 20px;
+                    height: 20px;
+                    source: root.icon;
+                    image-fit: contain;
+                }
+            }
+
+            if root.has_icon && root.colorize_icon : VerticalLayout {
+                alignment: center;
+                Icon {
+                    width: 18px;
+                    height: 18px;
+                    source: root.icon;
+                    colorize: root.active ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+                }
+            }
+
+            MaterialText {
+                text: root.text;
+                style: Typography.label_large;
+                color: root.active ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+                vertical_alignment: center;
+                overflow: clip;
+            }
+
+            if root.badge_count >= 0 : VerticalLayout {
+                alignment: center;
+
+                Rectangle {
+                    height: 20px;
+                    border_radius: 10px;
+                    background: root.badge_count > 0
+                        ? (root.active ? MaterialPalette.primary : MaterialPalette.primary_container)
+                        : MaterialPalette.surface_container_highest;
+
+                    HorizontalLayout {
+                        padding_left: 7px;
+                        padding_right: 7px;
+
+                        MaterialText {
+                            text: "" + root.badge_count;
+                            style: Typography.label_small;
+                            font_weight: 700;
+                            color: root.badge_count > 0
+                                ? (root.active ? MaterialPalette.on_primary : MaterialPalette.on_primary_container)
+                                : MaterialPalette.on_surface_variant;
+                            vertical_alignment: center;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+component ReleaseBadge {
+    in property <string> text;
+    in property <color> bg_color;
+    in property <color> fg_color;
+
+    height: 22px;
+
+    Rectangle {
+        border_radius: 11px;
+        background: root.bg_color;
+
+        HorizontalLayout {
+            padding_left: 9px;
+            padding_right: 9px;
+
+            MaterialText {
+                text: root.text;
+                style: Typography.label_small;
+                font_weight: 700;
+                color: root.fg_color;
+                vertical_alignment: center;
+            }
+        }
+    }
+}
+
+component ReleaseCard {
+    in property <EngineReleaseData> release;
+    in property <bool> selected: false;
+
+    callback clicked();
+
+    Rectangle {
+        width: 100%;
+        border_radius: 16px;
+        background: root.selected
+            ? MaterialPalette.surface_container_high
+            : (touch.has_hover ? MaterialPalette.surface_container : MaterialPalette.surface_container_low);
+        border_width: root.selected ? 2px : 1px;
+        border_color: root.selected
+            ? MaterialPalette.primary
+            : (touch.has_hover ? MaterialPalette.outline : MaterialPalette.outline_variant);
+        clip: true;
+
+        animate background { duration: 150ms; }
+        animate border_color { duration: 150ms; }
+
+        StateLayer {
+            width: 100%;
+            height: 100%;
+            border_radius: 16px;
+            background: MaterialPalette.on_surface;
+            enabled: true;
+            has_hover: touch.has_hover;
+            pressed: touch.pressed;
+        }
+
+        touch := TouchArea {
+            clicked => {
+                root.clicked();
+            }
+        }
+
+        VerticalLayout {
+            padding: 16px;
+            spacing: 8px;
+
+            HorizontalLayout {
+                spacing: 10px;
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 2px;
+
+                    MaterialText {
+                        text: root.release.name != "" ? root.release.name : root.release.tag;
+                        style: Typography.title_medium;
+                        color: MaterialPalette.on_surface;
+                        overflow: elide;
+                    }
+
+                    HorizontalLayout {
+                        spacing: 8px;
+
+                        MaterialText {
+                            text: root.release.tag;
+                            style: Typography.label_medium;
+                            color: MaterialPalette.primary;
+                            vertical_alignment: center;
+                        }
+
+                        if root.release.published_label != "" : MaterialText {
+                            text: "· " + root.release.published_label;
+                            style: Typography.body_small;
+                            color: MaterialPalette.on_surface_variant;
+                            vertical_alignment: center;
+                            overflow: elide;
+                        }
+                    }
+                }
+
+                HorizontalLayout {
+                    spacing: 6px;
+                    alignment: end;
+
+                    if root.release.is_default : VerticalLayout {
+                        alignment: center;
+                        ReleaseBadge {
+                            text: "Default";
+                            bg_color: MaterialPalette.primary;
+                            fg_color: MaterialPalette.on_primary;
+                        }
+                    }
+
+                    if root.release.is_installed : VerticalLayout {
+                        alignment: center;
+                        ReleaseBadge {
+                            text: "Installed";
+                            bg_color: MaterialPalette.secondary_container;
+                            fg_color: MaterialPalette.on_secondary_container;
+                        }
+                    }
+
+                    if root.release.is_prerelease : VerticalLayout {
+                        alignment: center;
+                        ReleaseBadge {
+                            text: "Prerelease";
+                            bg_color: MaterialPalette.tertiary_container;
+                            fg_color: MaterialPalette.on_tertiary_container;
+                        }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                VerticalLayout {
+                    alignment: center;
+                    Icon {
+                        width: 16px;
+                        height: 16px;
+                        source: OutlinedIcons.archive;
+                        colorize: MaterialPalette.on_surface_variant;
+                    }
+                }
+
+                MaterialText {
+                    horizontal-stretch: 1;
+                    text: root.release.asset_name != ""
+                        ? (root.release.asset_name + (root.release.asset_size_label != "" ? " (" + root.release.asset_size_label + ")" : ""))
+                        : (root.release.compatible ? "Source / release archive" : "No compatible binary for this platform");
+                    style: Typography.body_small;
+                    color: root.release.compatible ? MaterialPalette.on_surface_variant : MaterialPalette.error;
+                    overflow: elide;
+                    vertical_alignment: center;
+                }
+            }
+        }
+    }
+}
+
+component InstancesActionFooter {
+    in property <bool> has_release: false;
+    in property <EngineReleaseData> release;
+
+    Rectangle {
+        width: 100%;
+        background: MaterialPalette.surface_container_low;
+
+        VerticalLayout {
+            HorizontalDivider {}
+
+            // Busy progress bar state
+            if MainWindowAdapter.engine_busy : HorizontalLayout {
+                padding_left: MaterialStyleMetrics.padding_24;
+                padding_right: MaterialStyleMetrics.padding_24;
+                padding_top: 14px;
+                padding_bottom: 14px;
+                spacing: 16px;
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    spacing: 8px;
+
+                    HorizontalLayout {
+                        alignment: space_between;
+
+                        MaterialText {
+                            horizontal-stretch: 1;
+                            text: MainWindowAdapter.engine_busy_label != "" ? MainWindowAdapter.engine_busy_label : "Working...";
+                            style: Typography.label_large;
+                            color: MaterialPalette.on_surface;
+                            overflow: elide;
+                        }
+
+                        MaterialText {
+                            text: Math.round(clamp(MainWindowAdapter.engine_busy_progress, 0.0, 1.0) * 100) + "%";
+                            style: Typography.label_medium;
+                            color: MaterialPalette.primary;
+                        }
+                    }
+
+                    LinearProgressIndicator {
+                        width: 100%;
+                        progress: clamp(MainWindowAdapter.engine_busy_progress, 0.0, 1.0);
+                    }
+                }
+
+                VerticalLayout {
+                    alignment: center;
+
+                    OutlineButton {
+                        icon: OutlinedIcons.close;
+                        text: "Cancel";
+                        clicked => {
+                            MainWindowAdapter.cancel_engine_download();
+                        }
+                    }
+                }
+            }
+
+            // Idle action bar state (wide)
+            if !MainWindowAdapter.engine_busy && root.width >= 760px : HorizontalLayout {
+                padding_left: MaterialStyleMetrics.padding_24;
+                padding_right: MaterialStyleMetrics.padding_24;
+                padding_top: 12px;
+                padding_bottom: 12px;
+                spacing: 16px;
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    spacing: 2px;
+
+                    MaterialText {
+                        text: root.has_release
+                            ? (root.release.name != "" ? root.release.name : root.release.tag)
+                            : MainWindowAdapter.selected_engine_name;
+                        style: Typography.title_small;
+                        color: MaterialPalette.on_surface;
+                        overflow: elide;
+                    }
+
+                    MaterialText {
+                        text: root.has_release
+                            ? (root.release.asset_name != ""
+                                ? (root.release.asset_name + (root.release.asset_size_label != "" ? " (" + root.release.asset_size_label + ")" : ""))
+                                : root.release.tag)
+                            : "Select a release version to install or manage";
+                        style: Typography.body_small;
+                        color: MaterialPalette.on_surface_variant;
+                        overflow: elide;
+                    }
+                }
+
+                if root.has_release : HorizontalLayout {
+                    spacing: 8px;
+
+                    if !root.release.is_installed && root.release.compatible : VerticalLayout {
+                        alignment: center;
+
+                        FilledButton {
+                            icon: OutlinedIcons.download;
+                            text: "Install";
+                            clicked => {
+                                MainWindowAdapter.install_selected_engine();
+                            }
+                        }
+                    }
+
+                    if !root.release.is_installed && !root.release.compatible : VerticalLayout {
+                        alignment: center;
+
+                        OutlineButton {
+                            text: "Incompatible";
+                            enabled: false;
+                        }
+                    }
+
+                    if root.release.is_installed && !root.release.is_default : VerticalLayout {
+                        alignment: center;
+
+                        TonalButton {
+                            icon: OutlinedIcons.check_circle;
+                            text: "Set Default";
+                            clicked => {
+                                MainWindowAdapter.set_default_engine_version();
+                            }
+                        }
+                    }
+
+                    if root.release.is_installed : VerticalLayout {
+                        alignment: center;
+
+                        OutlineButton {
+                            icon: OutlinedIcons.delete;
+                            text: "Uninstall";
+                            clicked => {
+                                MainWindowAdapter.uninstall_selected_engine();
+                            }
+                        }
+                    }
+
+                    if root.release.is_installed : VerticalLayout {
+                        alignment: center;
+
+                        FilledButton {
+                            icon: MainWindowAdapter.engine_running ? OutlinedIcons.stop : FilledIcons.play_arrow;
+                            text: MainWindowAdapter.engine_running
+                                ? ("Stop (" + MainWindowAdapter.engine_session_label + ")")
+                                : "Launch";
+                            clicked => {
+                                if MainWindowAdapter.engine_running {
+                                    MainWindowAdapter.stop_selected_engine();
+                                } else {
+                                    MainWindowAdapter.launch_selected_engine();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Idle action bar state (compact)
+            if !MainWindowAdapter.engine_busy && root.width < 760px : VerticalLayout {
+                padding_left: MaterialStyleMetrics.padding_24;
+                padding_right: MaterialStyleMetrics.padding_24;
+                padding_top: 12px;
+                padding_bottom: 12px;
+                spacing: 10px;
+
+                VerticalLayout {
+                    spacing: 2px;
+
+                    MaterialText {
+                        text: root.has_release
+                            ? (root.release.name != "" ? root.release.name : root.release.tag)
+                            : MainWindowAdapter.selected_engine_name;
+                        style: Typography.title_small;
+                        color: MaterialPalette.on_surface;
+                        overflow: elide;
+                    }
+
+                    MaterialText {
+                        text: root.has_release
+                            ? (root.release.asset_name != ""
+                                ? (root.release.asset_name + (root.release.asset_size_label != "" ? " (" + root.release.asset_size_label + ")" : ""))
+                                : root.release.tag)
+                            : "Select a release version to install or manage";
+                        style: Typography.body_small;
+                        color: MaterialPalette.on_surface_variant;
+                        overflow: elide;
+                    }
+                }
+
+                if root.has_release : Flickable {
+                    width: 100%;
+                    height: 42px;
+                    viewport-width: compact_actions.preferred-width;
+                    viewport-height: 42px;
+                    interactive: self.viewport-width > self.width;
+
+                    compact_actions := HorizontalLayout {
+                        height: 42px;
+                        spacing: 8px;
+                        alignment: start;
+
+                        if !root.release.is_installed && root.release.compatible : VerticalLayout {
+                            alignment: center;
+                            FilledButton {
+                                icon: OutlinedIcons.download;
+                                text: "Install";
+                                clicked => {
+                                    MainWindowAdapter.install_selected_engine();
+                                }
+                            }
+                        }
+
+                        if !root.release.is_installed && !root.release.compatible : VerticalLayout {
+                            alignment: center;
+                            OutlineButton {
+                                text: "Incompatible";
+                                enabled: false;
+                            }
+                        }
+
+                        if root.release.is_installed : VerticalLayout {
+                            alignment: center;
+                            FilledButton {
+                                icon: MainWindowAdapter.engine_running ? OutlinedIcons.stop : FilledIcons.play_arrow;
+                                text: MainWindowAdapter.engine_running
+                                    ? ("Stop (" + MainWindowAdapter.engine_session_label + ")")
+                                    : "Launch";
+                                clicked => {
+                                    if MainWindowAdapter.engine_running {
+                                        MainWindowAdapter.stop_selected_engine();
+                                    } else {
+                                        MainWindowAdapter.launch_selected_engine();
+                                    }
+                                }
+                            }
+                        }
+
+                        if root.release.is_installed && !root.release.is_default : VerticalLayout {
+                            alignment: center;
+                            TonalButton {
+                                icon: OutlinedIcons.check_circle;
+                                text: "Set Default";
+                                clicked => {
+                                    MainWindowAdapter.set_default_engine_version();
+                                }
+                            }
+                        }
+
+                        if root.release.is_installed : VerticalLayout {
+                            alignment: center;
+                            OutlineButton {
+                                icon: OutlinedIcons.delete;
+                                text: "Uninstall";
+                                clicked => {
+                                    MainWindowAdapter.uninstall_selected_engine();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 export component InstancesView inherits Rectangle {
     background: MaterialPalette.background;
 
+    property <int> detail_tab: 0; // 0: Overview, 1: Release Notes
+
+    function resolve_engine_icon(eid: string) -> image {
+        if eid == "psych" { return EngineIcons.psych; }
+        if eid == "codename" { return EngineIcons.codename; }
+        if eid == "vslice" { return EngineIcons.vslice; }
+        if eid == "pslice" { return EngineIcons.pslice; }
+        if eid == "executable" { return EngineIcons.executable; }
+        if eid == "fpsplus" { return EngineIcons.fpsplus; }
+        if eid == "psychonline" { return EngineIcons.psychonline; }
+        return EngineIcons.vslice;
+    }
+
+    function resolve_engine_accent(eid: string) -> color {
+        if eid == "psych" { return #7C4DFF; }
+        if eid == "codename" { return #5C6BC0; }
+        if eid == "vslice" { return #00897B; }
+        if eid == "pslice" { return #EC407A; }
+        if eid == "fpsplus" { return #FB8C00; }
+        if eid == "psychonline" { return #29B6F6; }
+        return MaterialPalette.primary;
+    }
+
+    function has_selected_release() -> bool {
+        return MainWindowAdapter.engine_releases.length > 0
+            && MainWindowAdapter.selected_release_index >= 0
+            && MainWindowAdapter.selected_release_index < MainWindowAdapter.engine_releases.length;
+    }
+
+    function current_release() -> EngineReleaseData {
+        if root.has_selected_release() {
+            return MainWindowAdapter.engine_releases[MainWindowAdapter.selected_release_index];
+        }
+        return {
+            tag: "",
+            name: "",
+            published_label: "",
+            body: "",
+            asset_name: "",
+            asset_size_label: "",
+            download_url: "",
+            is_installed: false,
+            is_default: false,
+            is_prerelease: false,
+            compatible: false,
+        };
+    }
+
+    property <color> banner_accent: root.resolve_engine_accent(MainWindowAdapter.selected_engine_id);
+    property <bool> has_banner_asset: MainWindowAdapter.selected_engine_id == "psych"
+        || MainWindowAdapter.selected_engine_id == "vslice"
+        || MainWindowAdapter.selected_engine_id == "psychonline";
+
     VerticalLayout {
-        padding: MaterialStyleMetrics.padding_24;
-        spacing: MaterialStyleMetrics.spacing_16;
-        alignment: start;
+        spacing: 0px;
 
-        HorizontalLayout {
-            alignment: space_between;
+        // Top engine selector pills bar
+        Rectangle {
+            width: 100%;
+            background: MaterialPalette.surface_container_lowest;
 
-            MaterialText {
-                text: "Instancias y Engines";
-                style: Typography.headline_small;
-                color: MaterialPalette.on_background;
+            VerticalLayout {
+                HorizontalLayout {
+                    padding_left: MaterialStyleMetrics.padding_24;
+                    padding_right: MaterialStyleMetrics.padding_24;
+                    padding_top: 10px;
+                    padding_bottom: 10px;
+
+                    Flickable {
+                        horizontal-stretch: 1;
+                        height: 38px;
+                        viewport-width: engines_row.preferred-width;
+                        viewport-height: 38px;
+                        interactive: self.viewport-width > self.width;
+
+                        engines_row := HorizontalLayout {
+                            height: 38px;
+                            spacing: 8px;
+                            alignment: start;
+
+                            for engine in MainWindowAdapter.engines_list : VerticalLayout {
+                                alignment: center;
+
+                                FilterPill {
+                                    text: engine.name;
+                                    icon: root.resolve_engine_icon(engine.id);
+                                    colorize_icon: false;
+                                    badge_count: engine.installed_count;
+                                    active: MainWindowAdapter.selected_engine_id == engine.id;
+
+                                    clicked => {
+                                        MainWindowAdapter.select_engine(engine.id);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider {}
             }
+        }
 
-            TonalButton {
-                text: "Detectar activos";
-                clicked => {
-                    MainWindowAdapter.refresh_requested();
+        // Scrollable body
+        scroll := ScrollView {
+            vertical-stretch: 1;
+            horizontal_scrollbar_policy: ScrollBarPolicy.always_off;
+
+            VerticalLayout {
+                width: scroll.visible_width;
+                padding: MaterialStyleMetrics.padding_24;
+                spacing: MaterialStyleMetrics.spacing_16;
+                alignment: start;
+
+                // Engine Banner
+                Rectangle {
+                    width: 100%;
+                    height: 170px;
+                    border_radius: 24px;
+                    background: MaterialPalette.surface_container;
+                    border_width: 1px;
+                    border_color: MaterialPalette.outline_variant;
+                    clip: true;
+
+                    if MainWindowAdapter.selected_engine_id == "psych" : Image {
+                        width: 100%;
+                        height: 100%;
+                        source: AppAssets.banner_psych;
+                        image-fit: cover;
+                    }
+
+                    if MainWindowAdapter.selected_engine_id == "vslice" : Image {
+                        width: 100%;
+                        height: 100%;
+                        source: AppAssets.banner_vslice;
+                        image-fit: cover;
+                    }
+
+                    if MainWindowAdapter.selected_engine_id == "psychonline" : Image {
+                        width: 100%;
+                        height: 100%;
+                        source: AppAssets.banner_psychonline;
+                        image-fit: cover;
+                    }
+
+                    if !root.has_banner_asset : Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        background: @linear-gradient(135deg, root.banner_accent.with_alpha(0.65) 0%, root.banner_accent.with_alpha(0.22) 55%, MaterialPalette.surface_container_high 100%);
+                    }
+
+                    // Readability scrim
+                    Rectangle {
+                        width: 100%;
+                        height: 100%;
+                        background: @linear-gradient(180deg, #00000033 0%, #000000B8 100%);
+                    }
+
+                    // Top-right active default version badge
+                    if MainWindowAdapter.selected_engine_active_version != "" : Rectangle {
+                        x: parent.width - self.width - 20px;
+                        y: 16px;
+                        height: 28px;
+                        border_radius: 14px;
+                        background: #00000088;
+                        border_width: 1px;
+                        border_color: #FFFFFF33;
+
+                        HorizontalLayout {
+                            padding_left: 12px;
+                            padding_right: 12px;
+                            spacing: 6px;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    width: 14px;
+                                    height: 14px;
+                                    source: OutlinedIcons.check_circle;
+                                    colorize: #A5D6A7;
+                                }
+                            }
+
+                            MaterialText {
+                                text: "Default: " + MainWindowAdapter.selected_engine_active_version;
+                                style: Typography.label_medium;
+                                color: #FFFFFF;
+                                vertical_alignment: center;
+                            }
+                        }
+                    }
+
+                    // Bottom-left engine icon, title & repo
+                    HorizontalLayout {
+                        x: 0px;
+                        y: parent.height - self.preferred-height;
+                        width: 100%;
+                        padding: 20px;
+                        spacing: 16px;
+
+                        VerticalLayout {
+                            alignment: center;
+
+                            Rectangle {
+                                width: 56px;
+                                height: 56px;
+                                border_radius: 14px;
+                                background: #00000066;
+                                border_width: 1px;
+                                border_color: #FFFFFF22;
+
+                                Image {
+                                    x: (parent.width - self.width) / 2;
+                                    y: (parent.height - self.height) / 2;
+                                    width: 40px;
+                                    height: 40px;
+                                    source: root.resolve_engine_icon(MainWindowAdapter.selected_engine_id);
+                                    image-fit: contain;
+                                }
+                            }
+                        }
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            alignment: center;
+                            spacing: 3px;
+
+                            MaterialText {
+                                text: MainWindowAdapter.selected_engine_name;
+                                font_size: 24px;
+                                font_weight: 700;
+                                color: #FFFFFF;
+                                overflow: elide;
+                            }
+
+                            if MainWindowAdapter.selected_engine_repo != "" : MaterialText {
+                                text: MainWindowAdapter.selected_engine_repo;
+                                style: Typography.body_medium;
+                                color: #E0E0E0;
+                                overflow: elide;
+                            }
+                        }
+                    }
+                }
+
+                // Identity & actions row (responsive)
+                VerticalLayout {
+                    spacing: 10px;
+
+                    Flickable {
+                        width: 100%;
+                        height: 42px;
+                        viewport-width: id_actions_row.preferred-width;
+                        viewport-height: 42px;
+                        interactive: self.viewport-width > self.width;
+
+                        id_actions_row := HorizontalLayout {
+                            width: max(parent.width, self.preferred-width);
+                            height: 42px;
+                            spacing: 12px;
+                            alignment: space_between;
+
+                            HorizontalLayout {
+                                spacing: 8px;
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    TonalButton {
+                                        icon: OutlinedIcons.refresh;
+                                        text: "Refresh";
+                                        enabled: !MainWindowAdapter.engine_releases_loading;
+                                        clicked => {
+                                            MainWindowAdapter.refresh_engine_releases();
+                                        }
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+                                    OutlineButton {
+                                        icon: OutlinedIcons.folder_open;
+                                        text: "Open Folder";
+                                        clicked => {
+                                            MainWindowAdapter.open_engine_folder();
+                                        }
+                                    }
+                                }
+
+                                if MainWindowAdapter.selected_engine_repo != "" : VerticalLayout {
+                                    alignment: center;
+                                    OutlineButton {
+                                        icon: OutlinedIcons.open_in_new;
+                                        text: "GitHub";
+                                        clicked => {
+                                            MainWindowAdapter.open_engine_github();
+                                        }
+                                    }
+                                }
+                            }
+
+                            HorizontalLayout {
+                                spacing: 10px;
+
+                                if MainWindowAdapter.engine_running : VerticalLayout {
+                                    alignment: center;
+
+                                    Rectangle {
+                                        height: 32px;
+                                        border_radius: 16px;
+                                        background: MaterialPalette.primary_container;
+                                        border_width: 1px;
+                                        border_color: MaterialPalette.primary;
+
+                                        HorizontalLayout {
+                                            padding_left: 12px;
+                                            padding_right: 12px;
+                                            spacing: 6px;
+
+                                            VerticalLayout {
+                                                alignment: center;
+                                                Rectangle {
+                                                    width: 8px;
+                                                    height: 8px;
+                                                    border_radius: 4px;
+                                                    background: MaterialPalette.primary;
+                                                }
+                                            }
+
+                                            MaterialText {
+                                                text: "Running · " + MainWindowAdapter.engine_session_label;
+                                                style: Typography.label_medium;
+                                                font_weight: 700;
+                                                color: MaterialPalette.on_primary_container;
+                                                vertical_alignment: center;
+                                            }
+                                        }
+                                    }
+                                }
+
+                                VerticalLayout {
+                                    alignment: center;
+
+                                    HorizontalLayout {
+                                        spacing: 6px;
+
+                                        VerticalLayout {
+                                            alignment: center;
+                                            Icon {
+                                                width: 16px;
+                                                height: 16px;
+                                                source: OutlinedIcons.schedule;
+                                                colorize: MaterialPalette.on_surface_variant;
+                                            }
+                                        }
+
+                                        MaterialText {
+                                            text: "Playtime: " + MainWindowAdapter.engine_playtime_label;
+                                            style: Typography.label_large;
+                                            color: MaterialPalette.on_surface_variant;
+                                            vertical_alignment: center;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Error banner
+                if MainWindowAdapter.engine_releases_error != "" : Rectangle {
+                    width: 100%;
+                    border_radius: 14px;
+                    background: MaterialPalette.error_container;
+                    border_width: 1px;
+                    border_color: MaterialPalette.error;
+
+                    HorizontalLayout {
+                        padding: 14px;
+                        spacing: 12px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 20px;
+                                height: 20px;
+                                source: OutlinedIcons.warning;
+                                colorize: MaterialPalette.on_error_container;
+                            }
+                        }
+
+                        MaterialText {
+                            horizontal-stretch: 1;
+                            text: MainWindowAdapter.engine_releases_error;
+                            style: Typography.body_medium;
+                            color: MaterialPalette.on_error_container;
+                            wrap: word_wrap;
+                            vertical_alignment: center;
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            TextButton {
+                                text: "Retry";
+                                clicked => {
+                                    MainWindowAdapter.refresh_engine_releases();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Overview / Release Notes tabs
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+
+                    FilterPill {
+                        text: "Overview";
+                        active: root.detail_tab == 0;
+                        clicked => {
+                            root.detail_tab = 0;
+                        }
+                    }
+
+                    FilterPill {
+                        text: "Release Notes";
+                        active: root.detail_tab == 1;
+                        clicked => {
+                            root.detail_tab = 1;
+                        }
+                    }
+                }
+
+                // Tab content panel
+                Rectangle {
+                    width: 100%;
+                    border_radius: 16px;
+                    background: MaterialPalette.surface_container_low;
+                    border_width: 1px;
+                    border_color: MaterialPalette.outline_variant;
+
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 8px;
+
+                        if root.detail_tab == 0 : MaterialText {
+                            text: MainWindowAdapter.selected_engine_docs != ""
+                                ? MainWindowAdapter.selected_engine_docs
+                                : "No documentation available for this engine.";
+                            style: Typography.body_medium;
+                            color: MaterialPalette.on_surface_variant;
+                            wrap: word_wrap;
+                        }
+
+                        if root.detail_tab == 1 : VerticalLayout {
+                            spacing: 6px;
+
+                            if root.has_selected_release() : MaterialText {
+                                text: (root.current_release().name != "" ? root.current_release().name : root.current_release().tag) + " · Release Notes";
+                                style: Typography.title_small;
+                                color: MaterialPalette.on_surface;
+                            }
+
+                            MaterialText {
+                                text: root.has_selected_release()
+                                    ? (root.current_release().body != "" ? root.current_release().body : "No release notes provided for this version.")
+                                    : "Select a release below to read its release notes.";
+                                style: Typography.body_medium;
+                                color: MaterialPalette.on_surface_variant;
+                                wrap: word_wrap;
+                            }
+                        }
+                    }
+                }
+
+                // Releases section header
+                HorizontalLayout {
+                    alignment: space_between;
+
+                    MaterialText {
+                        text: "Releases (" + MainWindowAdapter.engine_releases.length + ")";
+                        style: Typography.title_large;
+                        color: MaterialPalette.on_background;
+                        vertical_alignment: center;
+                    }
+
+                    if MainWindowAdapter.engine_releases_loading : HorizontalLayout {
+                        spacing: 10px;
+
+                        CircularProgressIndicator {
+                            indeterminate: true;
+                        }
+
+                        MaterialText {
+                            text: "Loading releases...";
+                            style: Typography.label_medium;
+                            color: MaterialPalette.on_surface_variant;
+                            vertical_alignment: center;
+                        }
+                    }
+                }
+
+                if !MainWindowAdapter.engine_releases_loading && MainWindowAdapter.engine_releases.length == 0 : Rectangle {
+                    width: 100%;
+                    border_radius: 16px;
+                    background: MaterialPalette.surface_container_low;
+                    border_width: 1px;
+                    border_color: MaterialPalette.outline_variant;
+
+                    VerticalLayout {
+                        padding: 24px;
+                        spacing: 8px;
+
+                        MaterialText {
+                            text: "No releases found for " + MainWindowAdapter.selected_engine_name;
+                            style: Typography.title_medium;
+                            color: MaterialPalette.on_surface;
+                            horizontal_alignment: center;
+                        }
+
+                        MaterialText {
+                            text: "Click Refresh to fetch available versions from GitHub.";
+                            style: Typography.body_small;
+                            color: MaterialPalette.on_surface_variant;
+                            horizontal_alignment: center;
+                        }
+                    }
+                }
+
+                // Releases list
+                VerticalLayout {
+                    spacing: 10px;
+
+                    for release[idx] in MainWindowAdapter.engine_releases : ReleaseCard {
+                        release: release;
+                        selected: idx == MainWindowAdapter.selected_release_index;
+
+                        clicked => {
+                            MainWindowAdapter.select_engine_release(idx);
+                        }
+                    }
                 }
             }
         }
 
-        for engine in MainWindowAdapter.engines : ElevatedCard {
-            HorizontalLayout {
-                padding: MaterialStyleMetrics.padding_16;
-                spacing: MaterialStyleMetrics.spacing_12;
-                alignment: space_between;
-
-                VerticalLayout {
-                    spacing: MaterialStyleMetrics.spacing_4;
-                    MaterialText {
-                        text: engine.name + " (" + engine.version + ")";
-                        style: Typography.title_medium;
-                        color: MaterialPalette.on_surface;
-                    }
-                    MaterialText {
-                        text: (engine.installed ? "Instalado" : "No instalado") + " · Playtime: " + engine.playtime_label;
-                        style: Typography.body_medium;
-                        color: MaterialPalette.on_surface_variant;
-                    }
-                }
-
-                FilledButton {
-                    text: engine.installed ? "Lanzar" : "Instalar";
-                    clicked => {
-                        MainWindowAdapter.refresh_requested();
-                    }
-                }
-            }
+        // Bottom sticky action footer
+        InstancesActionFooter {
+            has_release: root.has_selected_release();
+            release: root.current_release();
         }
     }
 }

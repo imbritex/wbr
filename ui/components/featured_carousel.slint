@@ -20,7 +20,7 @@ component CarouselSlide {
         if eid == "codename" { return EngineIcons.codename; }
         if eid == "vslice" { return EngineIcons.vslice; }
         if eid == "pslice" { return EngineIcons.pslice; }
-        if eid == "executable" { return EngineIcons.executable; }
+        if eid == "executable" || eid == "exe" { return EngineIcons.executable; }
         if eid == "fpsplus" { return EngineIcons.fpsplus; }
         if eid == "psychonline" { return EngineIcons.psychonline; }
         return EngineIcons.vslice;
@@ -31,6 +31,7 @@ component CarouselSlide {
         || root.item.engine_id == "vslice"
         || root.item.engine_id == "pslice"
         || root.item.engine_id == "executable"
+        || root.item.engine_id == "exe"
         || root.item.engine_id == "fpsplus"
         || root.item.engine_id == "psychonline";
 
@@ -213,6 +214,7 @@ export component FeaturedCarousel {
             MaterialText {
                 text: "Featured Mods";
                 style: Typography.title_large;
+                font_weight: 700;
                 color: MaterialPalette.on_background;
             }
 
@@ -232,7 +234,7 @@ export component FeaturedCarousel {
             border_color: MaterialPalette.outline_variant;
 
             MaterialText {
-                text: "Cargando mods destacados de GameBanana...";
+                text: "Loading featured mods from GameBanana...";
                 style: Typography.body_large;
                 color: MaterialPalette.on_surface_variant;
                 horizontal_alignment: center;
@@ -295,6 +297,7 @@ export component FeaturedCarousel {
 
                 swipe_area := TouchArea {
                     property <length> drag_start_x: 0px;
+                    mouse-cursor: pointer;
 
                     pointer-event(event) => {
                         if event.kind == PointerEventKind.down {
@@ -304,9 +307,9 @@ export component FeaturedCarousel {
                                 root.next();
                             } else if (self.mouse-x - self.drag_start_x) > 36px {
                                 root.prev();
-                            } else if !root.compact && self.mouse-x < viewport.width * 0.1 {
+                            } else if root.item_count > 1 && !root.compact && self.mouse-x < viewport.width * 0.1 {
                                 root.prev();
-                            } else if self.mouse-x > viewport.width * 0.9 {
+                            } else if root.item_count > 1 && self.mouse-x > viewport.width * 0.9 {
                                 root.next();
                             } else {
                                 root.mod_clicked(root.get_item(root.active_index).id);
@@ -363,6 +366,7 @@ export component FeaturedCarousel {
                                     }
 
                                     TouchArea {
+                                        mouse-cursor: pointer;
                                         clicked => {
                                             root.go_to(idx);
                                         }

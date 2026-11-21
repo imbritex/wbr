@@ -1,0 +1,518 @@
+import {
+    FilledButton,
+    HorizontalDivider,
+    Icon,
+    IconButton,
+    MaterialPalette,
+    MaterialText,
+    Ripple,
+    StateLayer,
+    TextButton,
+    TextField,
+    Typography,
+} from "@material";
+import { MainWindowAdapter } from "../adapter.slint";
+import { OutlinedIcons } from "../icons.slint";
+
+export component CreateProfileDialog {
+    property <string> profile_name: "";
+    property <bool> is_open: MainWindowAdapter.create_profile_open;
+
+    changed is_open => {
+        if root.is_open {
+            root.profile_name = "";
+        }
+    }
+
+    width: 100%;
+    height: 100%;
+    visible: MainWindowAdapter.create_profile_open;
+
+    if MainWindowAdapter.create_profile_open : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #00000088;
+
+        FocusScope {
+            x: 0px;
+            width: 0px;
+            key_pressed(event) => {
+                if event.text == Key.Escape {
+                    MainWindowAdapter.create_profile_open = false;
+                    return accept;
+                }
+                reject
+            }
+        }
+
+        TouchArea {
+            width: 100%;
+            height: 100%;
+
+            clicked => {
+                MainWindowAdapter.create_profile_open = false;
+            }
+        }
+
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: min(parent.width - 32px, 440px);
+            border_radius: 24px;
+            background: MaterialPalette.surface_container_high;
+            border_width: 1px;
+            border_color: MaterialPalette.outline_variant;
+            clip: true;
+
+            TouchArea {
+                width: 100%;
+                height: 100%;
+            }
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        width: 40px;
+                        height: 40px;
+                        border_radius: 14px;
+                        background: MaterialPalette.primary_container;
+
+                        Icon {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            width: 22px;
+                            source: OutlinedIcons.create_new_folder;
+                            colorize: MaterialPalette.on_primary_container;
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+
+                        MaterialText {
+                            text: "New Profile";
+                            style: Typography.title_medium;
+                            font_weight: 700;
+                            color: MaterialPalette.on_surface;
+                        }
+
+                        MaterialText {
+                            text: "Create a collection to organize your mods";
+                            style: Typography.body_small;
+                            color: MaterialPalette.on_surface_variant;
+                        }
+                    }
+                }
+
+                TextField {
+                    label: "Profile Name";
+                    placeholder_text: "e.g. Favorites, Hard Mods, Psych Packs...";
+                    text <=> root.profile_name;
+
+                    accepted(t) => {
+                        if t != "" {
+                            MainWindowAdapter.create_profile(t);
+                            MainWindowAdapter.create_profile_open = false;
+                            root.profile_name = "";
+                        }
+                    }
+                }
+
+                HorizontalDivider {}
+
+                HorizontalLayout {
+                    alignment: end;
+                    spacing: 8px;
+
+                    TextButton {
+                        text: "Cancel";
+                        clicked => {
+                            root.profile_name = "";
+                            MainWindowAdapter.create_profile_open = false;
+                        }
+                    }
+
+                    FilledButton {
+                        text: "Create Profile";
+                        enabled: root.profile_name != "";
+                        clicked => {
+                            if root.profile_name != "" {
+                                MainWindowAdapter.create_profile(root.profile_name);
+                                root.profile_name = "";
+                                MainWindowAdapter.create_profile_open = false;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component ConfirmDialog {
+    property <bool> is_destructive: MainWindowAdapter.confirm_dialog.action_kind == "uninstall_mod"
+        || MainWindowAdapter.confirm_dialog.action_kind == "delete_profile"
+        || MainWindowAdapter.confirm_dialog.action_kind == "error";
+
+    width: 100%;
+    height: 100%;
+    visible: MainWindowAdapter.confirm_dialog.open;
+
+    if MainWindowAdapter.confirm_dialog.open : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #00000088;
+
+        FocusScope {
+            x: 0px;
+            width: 0px;
+            key_pressed(event) => {
+                if event.text == Key.Escape {
+                    MainWindowAdapter.confirm_dialog_cancel();
+                    return accept;
+                }
+                if event.text == Key.Return {
+                    MainWindowAdapter.confirm_dialog_accept();
+                    return accept;
+                }
+                reject
+            }
+        }
+
+        TouchArea {
+            width: 100%;
+            height: 100%;
+
+            clicked => {
+                MainWindowAdapter.confirm_dialog_cancel();
+            }
+        }
+
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: min(parent.width - 32px, 480px);
+            border_radius: 28px;
+            background: MaterialPalette.surface_container_high;
+            border_width: 1px;
+            border_color: MaterialPalette.outline_variant;
+            clip: true;
+
+            TouchArea {
+                width: 100%;
+                height: 100%;
+            }
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 16px;
+
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    VerticalLayout {
+                        alignment: center;
+                        Icon {
+                            width: 24px;
+                            source: root.is_destructive ? OutlinedIcons.warning : OutlinedIcons.info;
+                            colorize: root.is_destructive ? MaterialPalette.error : MaterialPalette.primary;
+                        }
+                    }
+
+                    MaterialText {
+                        horizontal-stretch: 1;
+                        text: MainWindowAdapter.confirm_dialog.title != ""
+                            ? MainWindowAdapter.confirm_dialog.title
+                            : "Confirm Action";
+                        style: Typography.headline_small;
+                        color: MaterialPalette.on_surface;
+                        wrap: word_wrap;
+                        vertical_alignment: center;
+                    }
+                }
+
+                MaterialText {
+                    text: MainWindowAdapter.confirm_dialog.message;
+                    style: Typography.body_medium;
+                    color: MaterialPalette.on_surface_variant;
+                    wrap: word_wrap;
+                }
+
+                HorizontalLayout {
+                    alignment: end;
+                    spacing: 8px;
+
+                    TextButton {
+                        text: MainWindowAdapter.confirm_dialog.cancel_text != ""
+                            ? MainWindowAdapter.confirm_dialog.cancel_text
+                            : "Cancel";
+                        clicked => {
+                            MainWindowAdapter.confirm_dialog_cancel();
+                        }
+                    }
+
+                    FilledButton {
+                        text: MainWindowAdapter.confirm_dialog.confirm_text != ""
+                            ? MainWindowAdapter.confirm_dialog.confirm_text
+                            : "Confirm";
+                        clicked => {
+                            MainWindowAdapter.confirm_dialog_accept();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component NewsMediaModal {
+    width: 100%;
+    height: 100%;
+    visible: MainWindowAdapter.news_media_open;
+
+    if MainWindowAdapter.news_media_open : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #000000CC;
+
+        FocusScope {
+            x: 0px;
+            width: 0px;
+            key_pressed(event) => {
+                if event.text == Key.Escape {
+                    MainWindowAdapter.close_news_media();
+                    return accept;
+                }
+                reject
+            }
+        }
+
+        TouchArea {
+            width: 100%;
+            height: 100%;
+
+            clicked => {
+                MainWindowAdapter.close_news_media();
+            }
+        }
+
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: min(parent.width - 48px, 900px);
+            height: min(parent.height - 48px, 680px);
+            border_radius: 24px;
+            background: #0B0D12;
+            border_width: 1px;
+            border_color: #FFFFFF22;
+            clip: true;
+
+            TouchArea {
+                width: 100%;
+                height: 100%;
+            }
+
+            VerticalLayout {
+                width: 100%;
+                height: 100%;
+                spacing: 0px;
+
+                Rectangle {
+                    vertical-stretch: 1;
+
+                    Image {
+                        width: 100%;
+                        height: 100%;
+                        source: MainWindowAdapter.news_media_image;
+                        image-fit: contain;
+                    }
+
+                    Rectangle {
+                        x: parent.width - self.width - 14px;
+                        y: 14px;
+                        width: 40px;
+                        height: 40px;
+                        border_radius: 20px;
+                        background: #00000099;
+                        clip: true;
+
+                        StateLayer {
+                            width: 100%;
+                            height: 100%;
+                            border_radius: 20px;
+                            background: #FFFFFF;
+                            enabled: true;
+                            has_focus: false;
+                            has_hover: nm_close_touch.has_hover;
+                            pressed: nm_close_touch.pressed;
+
+                            if nm_close_touch.pressed : Ripple {
+                                width: parent.width;
+                                height: parent.height;
+                                border_radius: 20px;
+                                pressed_x: nm_close_touch.pressed_x;
+                                pressed_y: nm_close_touch.pressed_y;
+                                color: #FFFFFF;
+                            }
+                        }
+
+                        nm_close_touch := TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            mouse-cursor: pointer;
+
+                            clicked => {
+                                MainWindowAdapter.close_news_media();
+                            }
+                        }
+
+                        Icon {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            width: 22px;
+                            source: OutlinedIcons.close;
+                            colorize: #FFFFFF;
+                        }
+                    }
+                }
+
+                if MainWindowAdapter.news_media_caption != "" : Rectangle {
+                    background: MaterialPalette.surface_container;
+
+                    VerticalLayout {
+                        padding_left: 16px;
+                        padding_right: 16px;
+                        padding_top: 12px;
+                        padding_bottom: 12px;
+
+                        MaterialText {
+                            text: MainWindowAdapter.news_media_caption;
+                            style: Typography.body_small;
+                            color: MaterialPalette.on_surface;
+                            wrap: word_wrap;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component CalloutToast {
+    property <bool> is_error: MainWindowAdapter.callout.kind == "error";
+    property <bool> is_warning: MainWindowAdapter.callout.kind == "warning";
+    property <bool> is_success: MainWindowAdapter.callout.kind == "success";
+
+    function resolve_bg() -> color {
+        if root.is_error { return MaterialPalette.error_container; }
+        if root.is_warning { return MaterialPalette.tertiary_container; }
+        if root.is_success { return MaterialPalette.secondary_container; }
+        return MaterialPalette.surface_container_high;
+    }
+
+    function resolve_fg() -> color {
+        if root.is_error { return MaterialPalette.on_error_container; }
+        if root.is_warning { return MaterialPalette.on_tertiary_container; }
+        if root.is_success { return MaterialPalette.on_secondary_container; }
+        return MaterialPalette.on_surface;
+    }
+
+    function resolve_accent() -> color {
+        if root.is_error { return MaterialPalette.error; }
+        if root.is_warning { return MaterialPalette.tertiary; }
+        if root.is_success { return #4FB3A9; }
+        return MaterialPalette.primary;
+    }
+
+    function resolve_icon() -> image {
+        if root.is_error || root.is_warning { return OutlinedIcons.warning; }
+        if root.is_success { return OutlinedIcons.check_circle; }
+        return OutlinedIcons.info;
+    }
+
+    width: 100%;
+    height: 100%;
+    visible: MainWindowAdapter.callout.visible;
+
+    if MainWindowAdapter.callout.visible : Rectangle {
+        x: parent.width - self.width - 20px;
+        y: parent.height - self.height - 20px;
+        width: min(parent.width - 32px, 380px);
+        border_radius: 14px;
+        background: root.resolve_bg();
+        border_width: 1px;
+        border_color: root.resolve_accent().with_alpha(0.4);
+        clip: true;
+
+        TouchArea {
+            width: 100%;
+            height: 100%;
+        }
+
+        // Left accent stripe
+        Rectangle {
+            x: 0px;
+            y: 0px;
+            width: 4px;
+            height: 100%;
+            background: root.resolve_accent();
+        }
+
+        HorizontalLayout {
+            padding_left: 14px;
+            padding_right: 8px;
+            padding_top: 10px;
+            padding_bottom: 10px;
+            spacing: 10px;
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    width: 20px;
+                    source: root.resolve_icon();
+                    colorize: root.resolve_accent();
+                }
+            }
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                alignment: center;
+                spacing: 2px;
+
+                if MainWindowAdapter.callout.title != "" : MaterialText {
+                    text: MainWindowAdapter.callout.title;
+                    style: Typography.title_small;
+                    font_weight: 700;
+                    color: root.resolve_fg();
+                    overflow: elide;
+                }
+
+                if MainWindowAdapter.callout.message != "" : MaterialText {
+                    text: MainWindowAdapter.callout.message;
+                    style: Typography.body_small;
+                    color: root.resolve_fg();
+                    opacity: 0.9;
+                    wrap: word_wrap;
+                }
+            }
+
+            VerticalLayout {
+                alignment: center;
+                IconButton {
+                    icon: OutlinedIcons.close;
+                    tooltip: "Dismiss";
+                    clicked => {
+                        MainWindowAdapter.dismiss_callout();
+                    }
+                }
+            }
+        }
+    }
+}

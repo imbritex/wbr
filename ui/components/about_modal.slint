@@ -1,0 +1,178 @@
+import {
+    FilledButton,
+    IconButton,
+    MaterialPalette,
+    MaterialText,
+    Typography,
+} from "@material";
+import { MainWindowAdapter } from "../adapter.slint";
+import { AppAssets, OutlinedIcons } from "../icons.slint";
+
+export component AboutModal {
+    width: 100%;
+    height: 100%;
+    visible: MainWindowAdapter.info_open;
+
+    if MainWindowAdapter.info_open : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #00000088;
+
+        FocusScope {
+            x: 0px;
+            width: 0px;
+            key_pressed(event) => {
+                if event.text == Key.Escape {
+                    MainWindowAdapter.close_info();
+                    return accept;
+                }
+                reject
+            }
+        }
+
+        TouchArea {
+            width: 100%;
+            height: 100%;
+
+            clicked => {
+                MainWindowAdapter.close_info();
+            }
+        }
+
+        Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: min(parent.width - 32px, 440px);
+            border_radius: 28px;
+            background: MaterialPalette.surface_container_high;
+            border_width: 1px;
+            border_color: MaterialPalette.outline_variant;
+            clip: true;
+
+            TouchArea {
+                width: 100%;
+                height: 100%;
+            }
+
+            VerticalLayout {
+                padding: 24px;
+                spacing: 14px;
+
+                // Header
+                HorizontalLayout {
+                    alignment: space-between;
+
+                    MaterialText {
+                        text: "About WeekBox";
+                        style: Typography.headline_small;
+                        font_weight: 700;
+                        color: MaterialPalette.on_surface;
+                        vertical_alignment: center;
+                    }
+
+                    IconButton {
+                        icon: OutlinedIcons.close;
+                        tooltip: "Close";
+                        clicked => {
+                            MainWindowAdapter.close_info();
+                        }
+                    }
+                }
+
+                // App Identity
+                HorizontalLayout {
+                    spacing: 12px;
+
+                    Rectangle {
+                        width: 48px;
+                        height: 48px;
+                        border_radius: 12px;
+                        background: MaterialPalette.surface_container;
+                        clip: true;
+
+                        Image {
+                            width: 100%;
+                            height: 100%;
+                            source: AppAssets.launcher_icon;
+                            image-fit: contain;
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+
+                        MaterialText {
+                            text: "WeekBox (wb-r)";
+                            style: Typography.title_medium;
+                            font_weight: 700;
+                            color: MaterialPalette.on_surface;
+                        }
+
+                        MaterialText {
+                            text: "Version 0.1.0 — Material 3 Expressive";
+                            style: Typography.body_small;
+                            color: MaterialPalette.on_surface_variant;
+                        }
+                    }
+                }
+
+                MaterialText {
+                    text: "High-performance native Rust & Slint launcher for Friday Night Funkin' mods, engines, profiles, and community news.";
+                    style: Typography.body_small;
+                    color: MaterialPalette.on_surface_variant;
+                    wrap: word_wrap;
+                }
+
+                // Platform pill card
+                Rectangle {
+                    border_radius: 12px;
+                    background: MaterialPalette.surface_container;
+
+                    HorizontalLayout {
+                        padding: 12px;
+                        alignment: space-between;
+
+                        MaterialText {
+                            text: "Active environment:";
+                            style: Typography.body_small;
+                            font_weight: 600;
+                            color: MaterialPalette.on_surface;
+                            vertical_alignment: center;
+                        }
+
+                        Rectangle {
+                            width: plat_lbl.preferred_width + 16px;
+                            height: 24px;
+                            border_radius: 6px;
+                            background: MaterialPalette.primary_container;
+
+                            plat_lbl := MaterialText {
+                                text: MainWindowAdapter.platform_label;
+                                style: Typography.label_medium;
+                                font_weight: 700;
+                                color: MaterialPalette.on_primary_container;
+                                horizontal_alignment: center;
+                                vertical_alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                // Footer
+                HorizontalLayout {
+                    padding_top: 4px;
+                    alignment: end;
+
+                    FilledButton {
+                        text: "Close";
+                        clicked => {
+                            MainWindowAdapter.close_info();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,141 @@
+import {
+    HorizontalDivider,
+    Icon,
+    MaterialPalette,
+    MaterialStyleMetrics,
+    MaterialText,
+    Ripple,
+    StateLayer,
+    Typography,
+} from "@material";
+import { OutlinedIcons } from "../icons.slint";
+
+export component Topbar inherits Rectangle {
+    min_height: max(60px, content_layout.min_height);
+    vertical-stretch: 0;
+    background: MaterialPalette.surface_container_lowest;
+
+    content_layout := VerticalLayout {
+        spacing: 0px;
+
+        HorizontalLayout {
+            vertical-stretch: 1;
+            padding_left: MaterialStyleMetrics.padding_20;
+            padding_right: MaterialStyleMetrics.padding_20;
+            padding_top: MaterialStyleMetrics.padding_10;
+            padding_bottom: MaterialStyleMetrics.padding_10;
+            spacing: MaterialStyleMetrics.spacing_12;
+
+            @children
+        }
+
+        HorizontalDivider {}
+    }
+}
+
+export component WbFilterChip {
+    in property <string> text;
+    in property <bool> selected: false;
+    in property <image> icon;
+    in property <bool> has_icon: false;
+    in property <bool> tint_icon: false;
+
+    callback clicked();
+
+    height: 32px;
+    horizontal-stretch: 0;
+    accessible-role: button;
+    accessible-label: root.text;
+    accessible-checkable: true;
+    accessible-checked: root.selected;
+    accessible-action-default => {
+        root.clicked();
+    }
+
+    chip_bg := Rectangle {
+        border_radius: 8px;
+        border_width: 1px;
+        border_color: root.selected ? transparent : MaterialPalette.outline;
+        background: root.selected ? MaterialPalette.secondary_container : transparent;
+        clip: true;
+
+        animate background { duration: 150ms; }
+        animate border_color { duration: 150ms; }
+
+        StateLayer {
+            width: 100%;
+            height: 100%;
+            background: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+            border_radius: 8px;
+            enabled: true;
+            has_focus: false;
+            has_hover: touch.has_hover;
+            pressed: touch.pressed;
+
+            if touch.pressed : Ripple {
+                width: parent.width;
+                height: parent.height;
+                border_radius: 8px;
+                pressed_x: touch.pressed_x;
+                pressed_y: touch.pressed_y;
+                color: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+            }
+        }
+
+        touch := TouchArea {
+            width: 100%;
+            height: 100%;
+            mouse-cursor: pointer;
+
+            clicked => {
+                root.clicked();
+            }
+        }
+
+        layout := HorizontalLayout {
+            padding_left: (root.has_icon || root.selected) ? 8px : 14px;
+            padding_right: 14px;
+            spacing: 6px;
+            alignment: center;
+
+            if root.has_icon && !root.tint_icon : VerticalLayout {
+                alignment: center;
+
+                Image {
+                    width: 18px;
+                    height: 18px;
+                    source: root.icon;
+                    image-fit: contain;
+                }
+            }
+
+            if root.has_icon && root.tint_icon : VerticalLayout {
+                alignment: center;
+
+                Icon {
+                    width: 16px;
+                    source: root.icon;
+                    colorize: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+                }
+            }
+
+            if !root.has_icon && root.selected : VerticalLayout {
+                alignment: center;
+
+                Icon {
+                    width: 16px;
+                    source: OutlinedIcons.check;
+                    colorize: MaterialPalette.on_secondary_container;
+                }
+            }
+
+            MaterialText {
+                text: root.text;
+                style: Typography.label_large;
+                color: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+                vertical_alignment: center;
+                overflow: clip;
+            }
+        }
+    }
+}

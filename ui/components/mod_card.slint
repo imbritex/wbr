@@ -1,22 +1,25 @@
 import {
     HorizontalDivider,
+    Icon,
     MaterialPalette,
     MaterialText,
 } from "@material";
 import { HomeModCardData } from "../adapter.slint";
-import { EngineIcons } from "../icons.slint";
+import { AppAssets, EngineIcons, FilledIcons, OutlinedIcons } from "../icons.slint";
+export { WbFilterChip } from "./topbar.slint";
 
 export component ModGridCard {
     in property <HomeModCardData> item;
 
     callback clicked(id: string);
+    callback favorite_clicked(id: string);
 
     function resolve_engine_icon(eid: string) -> image {
         if eid == "psych" { return EngineIcons.psych; }
         if eid == "codename" { return EngineIcons.codename; }
         if eid == "vslice" { return EngineIcons.vslice; }
         if eid == "pslice" { return EngineIcons.pslice; }
-        if eid == "executable" { return EngineIcons.executable; }
+        if eid == "executable" || eid == "exe" { return EngineIcons.executable; }
         if eid == "fpsplus" { return EngineIcons.fpsplus; }
         if eid == "psychonline" { return EngineIcons.psychonline; }
         return EngineIcons.vslice;
@@ -27,26 +30,35 @@ export component ModGridCard {
         || root.item.engine_id == "vslice"
         || root.item.engine_id == "pslice"
         || root.item.engine_id == "executable"
+        || root.item.engine_id == "exe"
         || root.item.engine_id == "fpsplus"
         || root.item.engine_id == "psychonline";
+
+    property <bool> is_hovered: touch.has_hover || fav_touch.has_hover;
+    property <color> card_surface: root.is_hovered
+        ? MaterialPalette.surface_container
+        : MaterialPalette.surface_container_low;
+
+    animate card_surface { duration: 150ms; }
 
     card_bg := Rectangle {
         width: 100%;
         height: 100%;
         border_radius: 16px;
-        background: touch.has_hover
-            ? MaterialPalette.surface_container
-            : MaterialPalette.surface_container_low;
+        background: root.card_surface;
         border_width: 1px;
-        border_color: touch.has_hover
+        border_color: root.is_hovered
             ? MaterialPalette.outline
             : MaterialPalette.outline_variant;
         clip: true;
 
-        animate background { duration: 150ms; }
         animate border_color { duration: 150ms; }
 
         touch := TouchArea {
+            width: 100%;
+            height: 100%;
+            mouse-cursor: pointer;
+
             clicked => {
                 root.clicked(root.item.id);
             }
@@ -56,35 +68,59 @@ export component ModGridCard {
             padding: 0px;
             spacing: 0px;
 
-            // 16:9 Thumbnail with top-left engine icon badge (from wb-rew CardThumbnail)
+            // 16:9 Thumbnail with bottom mask gradient & top-right badges (from wb-rew CardThumbnail)
             thumb := Rectangle {
                 width: 100%;
                 height: self.width * 9 / 16;
                 background: MaterialPalette.surface_container_highest;
                 clip: true;
 
-                if root.item.has_cover : Image {
+                Image {
                     width: 100%;
                     height: 100%;
-                    source: root.item.cover;
+                    source: root.item.has_cover ? root.item.cover : AppAssets.placeholder_mini;
                     image-fit: cover;
                 }
 
-                if root.show_engine_icon : Rectangle {
-                    x: 0px;
-                    y: 0px;
-                    width: 44px;
-                    height: 44px;
-                    border_bottom_right_radius: 14px;
-                    background: card_bg.background;
+                Rectangle {
+                    width: 100%;
+                    height: 100%;
+                    background: @linear-gradient(180deg, #00000000 55%, root.card_surface 100%);
+                }
 
-                    Image {
-                        x: (parent.width - self.width) / 2 - 1px;
-                        y: (parent.height - self.height) / 2 - 1px;
-                        width: 28px;
-                        height: 28px;
-                        source: root.resolve_engine_icon(root.item.engine_id);
-                        image-fit: contain;
+                // Top-right bookmark & favorite indicator badges
+                if root.item.is_bookmarked || root.item.is_favorite : Rectangle {
+                    x: parent.width - self.width - 8px;
+                    y: 8px;
+                    width: badges_row.preferred_width + 12px;
+                    height: 24px;
+                    border_radius: 12px;
+                    background: #00000088;
+
+                    badges_row := HorizontalLayout {
+                        x: 6px;
+                        y: 0px;
+                        height: 100%;
+                        spacing: 4px;
+                        alignment: center;
+
+                        if root.item.is_bookmarked : VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 15px;
+                                source: FilledIcons.bookmark;
+                                colorize: #FBBF24;
+                            }
+                        }
+
+                        if root.item.is_favorite : VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 15px;
+                                source: FilledIcons.favorite;
+                                colorize: #EF4444;
+                            }
+                        }
                     }
                 }
             }
@@ -92,23 +128,85 @@ export component ModGridCard {
             // Card content (from wb-rew CardContent + ModGridCard stats)
             VerticalLayout {
                 vertical-stretch: 1;
-                padding: 12px;
+                padding_left: 12px;
+                padding_right: 12px;
+                padding_top: 8px;
+                padding_bottom: 12px;
                 spacing: 6px;
 
-                MaterialText {
-                    text: root.item.title;
-                    font_size: 14px;
-                    font_weight: 700;
-                    color: MaterialPalette.on_surface;
+                HorizontalLayout {
+                    spacing: 6px;
+
+                    MaterialText {
+                        horizontal-stretch: 1;
+                        text: root.item.title;
+                        font_size: 14px;
+                        font_weight: 700;
+                        color: MaterialPalette.on_surface;
+                        overflow: elide;
+                        vertical_alignment: center;
+                    }
+
+                    if root.item.is_nsfw : VerticalLayout {
+                        alignment: center;
+
+                        Rectangle {
+                            width: nsfw_lbl.preferred_width + 10px;
+                            height: 18px;
+                            border_radius: 4px;
+                            background: #EF444433;
+                            border_width: 1px;
+                            border_color: #EF444466;
+
+                            nsfw_lbl := MaterialText {
+                                text: "NSFW";
+                                font_size: 10px;
+                                font_weight: 700;
+                                color: #EF4444;
+                                horizontal_alignment: center;
+                                vertical_alignment: center;
+                            }
+                        }
+                    }
+                }
+
+                if root.item.description != "" : MaterialText {
+                    text: root.item.description;
+                    font_size: 12px;
+                    font_weight: 400;
+                    color: MaterialPalette.on_surface_variant;
                     overflow: elide;
                 }
 
-                MaterialText {
-                    text: root.item.author != "" ? root.item.author : "Unknown Creator";
-                    font_size: 12px;
-                    font_weight: 600;
-                    color: MaterialPalette.on_surface_variant;
-                    overflow: elide;
+                HorizontalLayout {
+                    spacing: 6px;
+
+                    Rectangle {
+                        width: 20px;
+                        height: 20px;
+                        border_radius: 10px;
+                        background: MaterialPalette.surface_container_highest;
+                        border_width: 1px;
+                        border_color: MaterialPalette.outline_variant;
+
+                        Icon {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            width: 14px;
+                            source: OutlinedIcons.person;
+                            colorize: MaterialPalette.on_surface_variant;
+                        }
+                    }
+
+                    MaterialText {
+                        horizontal-stretch: 1;
+                        text: root.item.author != "" ? root.item.author : "Unknown Creator";
+                        font_size: 12px;
+                        font_weight: 600;
+                        color: MaterialPalette.on_surface_variant;
+                        overflow: elide;
+                        vertical_alignment: center;
+                    }
                 }
 
                 Rectangle {
@@ -121,28 +219,178 @@ export component ModGridCard {
                     padding_top: 2px;
                     alignment: space-between;
 
-                    MaterialText {
-                        text: "👁 " + root.item.views;
-                        font_size: 11px;
-                        font_weight: 500;
-                        color: MaterialPalette.on_surface_variant;
+                    HorizontalLayout {
+                        spacing: 4px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 14px;
+                                source: OutlinedIcons.visibility;
+                                colorize: MaterialPalette.on_surface_variant;
+                            }
+                        }
+
+                        MaterialText {
+                            text: root.item.views_label != "" ? root.item.views_label : ("" + root.item.views);
+                            font_size: 11px;
+                            font_weight: 500;
+                            color: MaterialPalette.on_surface_variant;
+                            vertical_alignment: center;
+                        }
                     }
 
-                    MaterialText {
-                        text: "♥ " + root.item.likes;
-                        font_size: 11px;
-                        font_weight: 500;
-                        color: MaterialPalette.on_surface_variant;
+                    Rectangle {
+                        width: fav_row.preferred_width + 8px;
+                        height: 22px;
+                        border_radius: 6px;
+                        background: fav_touch.has_hover ? #EF44441F : transparent;
+
+                        animate background { duration: 120ms; }
+
+                        fav_touch := TouchArea {
+                            width: 100%;
+                            height: 100%;
+                            mouse-cursor: pointer;
+
+                            clicked => {
+                                root.favorite_clicked(root.item.id);
+                            }
+                        }
+
+                        fav_row := HorizontalLayout {
+                            x: 4px;
+                            y: 0px;
+                            height: 100%;
+                            spacing: 4px;
+
+                            VerticalLayout {
+                                alignment: center;
+                                Icon {
+                                    width: 14px;
+                                    source: root.item.is_favorite ? FilledIcons.favorite : OutlinedIcons.favorite;
+                                    colorize: (root.item.is_favorite || fav_touch.has_hover)
+                                        ? #EF4444
+                                        : MaterialPalette.on_surface_variant;
+                                }
+                            }
+
+                            MaterialText {
+                                text: root.item.likes_label != "" ? root.item.likes_label : ("" + root.item.likes);
+                                font_size: 11px;
+                                font_weight: 500;
+                                color: (root.item.is_favorite || fav_touch.has_hover)
+                                    ? #EF4444
+                                    : MaterialPalette.on_surface_variant;
+                                vertical_alignment: center;
+                            }
+                        }
                     }
 
-                    MaterialText {
-                        text: "⬇ " + root.item.downloads;
-                        font_size: 11px;
-                        font_weight: 500;
-                        color: MaterialPalette.on_surface_variant;
+                    HorizontalLayout {
+                        spacing: 4px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            Icon {
+                                width: 14px;
+                                source: OutlinedIcons.download;
+                                colorize: MaterialPalette.on_surface_variant;
+                            }
+                        }
+
+                        MaterialText {
+                            text: root.item.downloads_label != "" ? root.item.downloads_label : ("" + root.item.downloads);
+                            font_size: 11px;
+                            font_weight: 500;
+                            color: MaterialPalette.on_surface_variant;
+                            vertical_alignment: center;
+                        }
                     }
                 }
             }
         }
+    }
+
+    // Top-left notched engine corner (from wb-rew NotchCornerOverlay + card-notch.ts)
+    if root.show_engine_icon : Rectangle {
+        x: 0px;
+        y: 0px;
+        width: 58px;
+        height: 58px;
+        border_bottom_right_radius: 14px;
+        background: MaterialPalette.background;
+
+        Image {
+            x: (parent.width - self.width) / 2 - 2px;
+            y: (parent.height - self.height) / 2 - 2px;
+            width: 40px;
+            height: 40px;
+            source: root.resolve_engine_icon(root.item.engine_id);
+            image-fit: contain;
+        }
+
+        if root.item.has_warning : Rectangle {
+            x: parent.width - self.width - 4px;
+            y: 4px;
+            width: 18px;
+            height: 18px;
+            border_radius: 9px;
+            background: #F59E0B;
+
+            Icon {
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2;
+                width: 12px;
+                source: OutlinedIcons.warning;
+                colorize: #111318;
+            }
+        }
+    }
+
+    // Concave quarter-circle fillet to the right of the engine corner
+    if root.show_engine_icon : Path {
+        x: 58px;
+        y: 0px;
+        width: 12px;
+        height: 12px;
+        viewbox-width: 12;
+        viewbox-height: 12;
+        fill: MaterialPalette.background;
+
+        MoveTo { x: 0; y: 0; }
+        LineTo { x: 12; y: 0; }
+        CubicTo {
+            control-1-x: 5.37;
+            control-1-y: 0;
+            control-2-x: 0;
+            control-2-y: 5.37;
+            x: 0;
+            y: 12;
+        }
+        Close {}
+    }
+
+    // Concave quarter-circle fillet below the engine corner
+    if root.show_engine_icon : Path {
+        x: 0px;
+        y: 58px;
+        width: 12px;
+        height: 12px;
+        viewbox-width: 12;
+        viewbox-height: 12;
+        fill: MaterialPalette.background;
+
+        MoveTo { x: 0; y: 0; }
+        LineTo { x: 12; y: 0; }
+        CubicTo {
+            control-1-x: 5.37;
+            control-1-y: 0;
+            control-2-x: 0;
+            control-2-y: 5.37;
+            x: 0;
+            y: 12;
+        }
+        Close {}
     }
 }

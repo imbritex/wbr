@@ -1,16 +1,8 @@
-export struct EngineCardData {
-    id: string,
-    name: string,
-    version: string,
-    installed: bool,
-    playtime_label: string,
-}
-
-export struct ModCardData {
-    id: string,
-    title: string,
-    author: string,
-    engine: string,
+export enum AppTab {
+    home,
+    library,
+    instances,
+    news,
 }
 
 export struct FeaturedModCardData {
@@ -27,50 +19,307 @@ export struct FeaturedModCardData {
 export struct HomeModCardData {
     id: string,
     title: string,
+    description: string,
     author: string,
     engine_id: string,
     engine_name: string,
     likes: int,
     views: int,
     downloads: int,
+    likes_label: string,
+    views_label: string,
+    downloads_label: string,
+    is_favorite: bool,
+    is_bookmarked: bool,
+    is_nsfw: bool,
+    has_warning: bool,
     cover: image,
     has_cover: bool,
 }
 
-export struct NewsItemData {
+export struct InstalledModCardData {
+    id: string,
     title: string,
-    source: string,
-    summary: string,
+    description: string,
+    author: string,
+    engine_id: string,
+    engine_name: string,
+    folder_name: string,
+    install_path: string,
+    size_label: string,
+    is_favorite: bool,
+    is_bookmarked: bool,
+    is_visible: bool,
+    has_warning: bool,
+    warning_message: string,
+    cover: image,
+    has_cover: bool,
 }
 
-export enum AppTab {
-    home,
-    library,
-    instances,
-    news,
+export struct ModProfileData {
+    id: string,
+    name: string,
+    mod_count: int,
+    mod_ids_csv: string,
+}
+
+export struct ModFileData {
+    id: string,
+    filename: string,
+    description: string,
+    size_label: string,
+    downloads_label: string,
+    download_url: string,
+    is_installing: bool,
+    progress: float,
+}
+
+export struct ModDetailsData {
+    open: bool,
+    loading: bool,
+    id: string,
+    title: string,
+    author: string,
+    description: string,
+    engine_id: string,
+    engine_name: string,
+    version: string,
+    likes_label: string,
+    views_label: string,
+    downloads_label: string,
+    date_label: string,
+    page_url: string,
+    is_installed: bool,
+    is_favorite: bool,
+    is_bookmarked: bool,
+    is_installing: bool,
+    install_progress: float,
+    install_status: string,
+    active_media_index: int,
+    media_count: int,
+    active_media: image,
+    has_active_media: bool,
+    credits_summary: string,
+    files: [ModFileData],
+}
+
+export struct EngineOptionData {
+    id: string,
+    name: string,
+    repo: string,
+    description: string,
+    accent: color,
+    installed_count: int,
+    active_version: string,
+    has_banner: bool,
+}
+
+export struct EngineReleaseData {
+    tag: string,
+    name: string,
+    published_label: string,
+    body: string,
+    asset_name: string,
+    asset_size_label: string,
+    download_url: string,
+    is_installed: bool,
+    is_default: bool,
+    is_prerelease: bool,
+    compatible: bool,
+}
+
+export struct NewsSourceData {
+    username: string,
+    name: string,
+    available: bool,
+}
+
+export struct NewsPostData {
+    id: string,
+    author_name: string,
+    author_handle: string,
+    source_name: string,
+    text: string,
+    time_label: string,
+    url: string,
+    is_repost: bool,
+    reposted_by: string,
+    quote_author: string,
+    quote_text: string,
+    likes_label: string,
+    reposts_label: string,
+    replies_label: string,
+    views_label: string,
+    photo: image,
+    has_photo: bool,
+    photo_url: string,
+    has_video: bool,
+}
+
+export struct ConfirmDialogData {
+    open: bool,
+    title: string,
+    message: string,
+    confirm_text: string,
+    cancel_text: string,
+    action_kind: string,
+    action_target_id: string,
+}
+
+export struct CalloutData {
+    visible: bool,
+    title: string,
+    message: string,
+    kind: string,
 }
 
 export global MainWindowAdapter {
     in_out property <AppTab> active_tab: AppTab.home;
+    in_out property <bool> dark_mode: true;
     in_out property <string> library_path: "";
-    in_out property <string> status_message: "Iniciando...";
-    in_out property <[EngineCardData]> engines: [];
-    in_out property <[ModCardData]> mods: [];
+    in_out property <string> status_message: "Listo";
+
+    // Home
+    in_out property <string> home_filter: "ripe";
+    in_out property <string> home_engine_filter: "all";
+    in_out property <string> home_search_query: "";
     in_out property <[FeaturedModCardData]> featured_mods: [];
     in_out property <bool> featured_loading: true;
     in_out property <[HomeModCardData]> home_mods: [];
     in_out property <bool> home_mods_loading: true;
     in_out property <bool> home_mods_loading_more: false;
     in_out property <bool> home_mods_has_more: true;
-    in_out property <[NewsItemData]> news: [];
-    in_out property <bool> info_open: false;
-    in_out property <bool> settings_open: false;
+    in_out property <string> home_mods_error: "";
 
-    callback refresh_requested();
-    callback search_mods(query: string);
+    callback set_dark_mode(dark: bool);
+    callback set_home_filter(filter: string);
+    callback set_home_engine_filter(engine: string);
+    callback submit_home_search(query: string);
+    callback clear_home_search();
+    callback retry_home_mods();
+    callback load_more_home_mods();
     callback featured_mod_clicked(id: string);
     callback home_mod_clicked(id: string);
-    callback load_more_home_mods();
+    callback open_mod_details(id: string);
+    callback toggle_mod_favorite(id: string);
+    callback toggle_mod_bookmark(id: string);
+
+    // Mod Details Modal
+    in_out property <ModDetailsData> mod_details;
+    callback close_mod_details();
+    callback mod_details_prev_media();
+    callback mod_details_next_media();
+    callback install_mod_file(mod_id: string, file_url: string, filename: string);
+    callback play_mod(mod_id: string);
+    callback uninstall_mod(mod_id: string);
+    callback open_mod_folder(mod_id: string);
+    callback open_external_url(url: string);
+
+    // Library
+    in_out property <[InstalledModCardData]> library_mods: [];
+    in_out property <bool> library_loading: false;
+    in_out property <string> library_search_query: "";
+    in_out property <string> library_engine_filter: "all";
+    in_out property <string> library_sort_by: "recent";
+    in_out property <bool> library_only_favorites: false;
+    in_out property <bool> library_only_bookmarks: false;
+    in_out property <int> library_total_count: 0;
+    in_out property <string> library_storage_label: "0 B";
+    in_out property <[ModProfileData]> profiles: [];
+    in_out property <string> active_profile_id: "";
+    in_out property <bool> create_profile_open: false;
+
+    callback set_library_search(query: string);
+    callback set_library_engine_filter(engine: string);
+    callback set_library_sort_by(sort_by: string);
+    callback toggle_library_favorites_filter();
+    callback toggle_library_bookmarks_filter();
+    callback clear_library_filters();
+    callback refresh_library();
+    callback open_all_mods_folder();
+    callback toggle_mod_visibility(id: string);
+    callback request_uninstall_mod(id: string);
+    callback select_profile(id: string);
+    callback create_profile(name: string);
+    callback delete_profile(id: string);
+    callback toggle_mod_in_active_profile(mod_id: string);
+    callback play_active_profile();
+
+    // Instances
+    in_out property <[EngineOptionData]> engines_list: [];
+    in_out property <string> selected_engine_id: "psych";
+    in_out property <string> selected_engine_name: "Psych Engine";
+    in_out property <string> selected_engine_repo: "ShadowMario/FNF-PsychEngine";
+    in_out property <string> selected_engine_docs: "";
+    in_out property <string> selected_engine_active_version: "";
+    in_out property <[EngineReleaseData]> engine_releases: [];
+    in_out property <int> selected_release_index: 0;
+    in_out property <bool> engine_releases_loading: false;
+    in_out property <string> engine_releases_error: "";
+    in_out property <bool> engine_busy: false;
+    in_out property <string> engine_busy_label: "";
+    in_out property <float> engine_busy_progress: 0.0;
+    in_out property <bool> engine_running: false;
+    in_out property <string> engine_session_label: "";
+    in_out property <string> engine_playtime_label: "0 min";
+
+    callback select_engine(id: string);
+    callback select_engine_release(index: int);
+    callback refresh_engine_releases();
+    callback install_selected_engine();
+    callback cancel_engine_download();
+    callback launch_selected_engine();
+    callback stop_selected_engine();
+    callback set_default_engine_version();
+    callback uninstall_selected_engine();
+    callback open_engine_folder();
+    callback open_engine_github();
+
+    // News
+    in_out property <[NewsSourceData]> news_sources: [];
+    in_out property <string> news_selected_account: "";
+    in_out property <[NewsPostData]> news_posts: [];
+    in_out property <bool> news_loading: false;
+    in_out property <bool> news_loading_more: false;
+    in_out property <bool> news_has_more: true;
+    in_out property <string> news_error: "";
+    in_out property <bool> news_media_open: false;
+    in_out property <image> news_media_image;
+    in_out property <string> news_media_caption: "";
+
+    callback select_news_account(account: string);
+    callback refresh_news();
+    callback load_more_news();
+    callback open_news_media(post_id: string);
+    callback close_news_media();
+
+    // Modals / Dialogs / Callouts
+    in_out property <bool> info_open: false;
+    in_out property <bool> settings_open: false;
+    in_out property <string> platform_label: "Windows";
+    in_out property <ConfirmDialogData> confirm_dialog: {
+        open: false,
+        title: "",
+        message: "",
+        confirm_text: "Confirm",
+        cancel_text: "Cancel",
+        action_kind: "",
+        action_target_id: "",
+    };
+    in_out property <CalloutData> callout: {
+        visible: false,
+        title: "",
+        message: "",
+        kind: "info",
+    };
+
     callback open_info();
+    callback close_info();
     callback open_settings();
+    callback close_settings();
+    callback open_about_from_settings();
+    callback confirm_dialog_accept();
+    callback confirm_dialog_cancel();
+    callback dismiss_callout();
+    callback open_library_folder();
 }

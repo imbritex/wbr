@@ -5,6 +5,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AppConfig {
     pub library_path: PathBuf,
     pub dark_mode: bool,
@@ -38,15 +39,34 @@ impl AppConfig {
 
         if !path.exists() {
             let cfg = Self::default();
-            if let Some(parent) = path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::write(&path, serde_json::to_string_pretty(&cfg)?)?;
+            cfg.save()?;
             return Ok(cfg);
         }
 
         let raw = fs::read_to_string(&path)?;
+        if raw.trim().is_empty() {
+            return Ok(Self::default());
+        }
         let cfg = serde_json::from_str(&raw)?;
         Ok(cfg)
+    }
+
+    pub fn save(&self) -> anyhow::Result<()> {
+        let Some(path) = Self::config_file_path() else {
+            anyhow::bail!("No se pudo resolver la ruta de configuración del sistema");
+        };
+
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let json = serde_json::to_string_pretty(self)?;
+        let tmp_path = path.with_extension("json.tmp");
+        fs::write(&tmp_path, &json)?;
+        if fs::rename(&tmp_path, &path).is_err() {
+            let _ = fs::remove_file(&tmp_path);
+            fs::write(&path, json)?;
+        }
+        Ok(())
     }
 }

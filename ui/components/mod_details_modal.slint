@@ -1,0 +1,802 @@
+import {
+    FilledButton,
+    HorizontalDivider,
+    Icon,
+    IconButton,
+    LinearProgressIndicator,
+    MaterialPalette,
+    MaterialText,
+    OutlineButton,
+    OutlinedCard,
+    Ripple,
+    ScrollView,
+    StateLayer,
+    TonalButton,
+    Typography,
+} from "@material";
+import { MainWindowAdapter, ModDetailsData } from "../adapter.slint";
+import { AppAssets, EngineIcons, FilledIcons, OutlinedIcons } from "../icons.slint";
+
+component StatPill {
+    in property <image> icon;
+    in property <string> label;
+    in property <string> value;
+
+    Rectangle {
+        border_radius: 10px;
+        background: MaterialPalette.surface_container_high;
+        border_width: 1px;
+        border_color: MaterialPalette.outline_variant;
+
+        HorizontalLayout {
+            padding_left: 10px;
+            padding_right: 10px;
+            padding_top: 6px;
+            padding_bottom: 6px;
+            spacing: 6px;
+
+            VerticalLayout {
+                alignment: center;
+                Icon {
+                    width: 15px;
+                    source: root.icon;
+                    colorize: MaterialPalette.primary;
+                }
+            }
+
+            VerticalLayout {
+                spacing: 1px;
+
+                MaterialText {
+                    text: root.value;
+                    style: Typography.label_medium;
+                    font_weight: 700;
+                    color: MaterialPalette.on_surface;
+                }
+
+                MaterialText {
+                    text: root.label;
+                    style: Typography.label_small;
+                    color: MaterialPalette.on_surface_variant;
+                }
+            }
+        }
+    }
+}
+
+component ModalTabButton {
+    in property <string> text;
+    in property <bool> selected;
+
+    callback clicked();
+
+    height: 36px;
+    horizontal-stretch: 1;
+
+    Rectangle {
+        border_radius: 10px;
+        background: root.selected ? MaterialPalette.secondary_container : transparent;
+        clip: true;
+
+        animate background { duration: 150ms; }
+
+        StateLayer {
+            width: 100%;
+            height: 100%;
+            border_radius: 10px;
+            background: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+            enabled: true;
+            has_focus: false;
+            has_hover: tab_touch.has_hover;
+            pressed: tab_touch.pressed;
+        }
+
+        tab_touch := TouchArea {
+            width: 100%;
+            height: 100%;
+            mouse-cursor: pointer;
+
+            clicked => {
+                root.clicked();
+            }
+        }
+
+        MaterialText {
+            text: root.text;
+            style: Typography.label_large;
+            font_weight: root.selected ? 700 : 500;
+            color: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+            horizontal_alignment: center;
+            vertical_alignment: center;
+        }
+    }
+}
+
+component OverlayCircleButton {
+    in property <image> icon;
+    in property <string> tooltip;
+
+    callback clicked();
+
+    width: 38px;
+    height: 38px;
+
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        border_radius: 19px;
+        background: #00000099;
+        clip: true;
+
+        StateLayer {
+            width: 100%;
+            height: 100%;
+            border_radius: 19px;
+            background: #FFFFFF;
+            enabled: true;
+            has_focus: false;
+            has_hover: btn_touch.has_hover;
+            pressed: btn_touch.pressed;
+
+            if btn_touch.pressed : Ripple {
+                width: parent.width;
+                height: parent.height;
+                border_radius: 19px;
+                pressed_x: btn_touch.pressed_x;
+                pressed_y: btn_touch.pressed_y;
+                color: #FFFFFF;
+            }
+        }
+
+        btn_touch := TouchArea {
+            width: 100%;
+            height: 100%;
+            mouse-cursor: pointer;
+
+            clicked => {
+                root.clicked();
+            }
+        }
+
+        Icon {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: 22px;
+            source: root.icon;
+            colorize: #FFFFFF;
+        }
+    }
+}
+
+component ModMediaAndActions {
+    in property <ModDetailsData> details;
+
+    VerticalLayout {
+        spacing: 12px;
+
+        // Media Carousel Preview (16:9)
+        Rectangle {
+            width: 100%;
+            height: self.width * 9 / 16;
+            border_radius: 16px;
+            background: MaterialPalette.surface_container_lowest;
+            border_width: 1px;
+            border_color: MaterialPalette.outline_variant;
+            clip: true;
+
+            Image {
+                width: 100%;
+                height: 100%;
+                source: root.details.has_active_media
+                    ? root.details.active_media
+                    : AppAssets.placeholder_mini;
+                image-fit: root.details.has_active_media ? contain : cover;
+            }
+
+            if root.details.media_count > 1 : OverlayCircleButton {
+                x: 10px;
+                y: (parent.height - self.height) / 2;
+                icon: OutlinedIcons.chevron_left;
+                tooltip: "Previous media";
+                clicked => {
+                    MainWindowAdapter.mod_details_prev_media();
+                }
+            }
+
+            if root.details.media_count > 1 : OverlayCircleButton {
+                x: parent.width - self.width - 10px;
+                y: (parent.height - self.height) / 2;
+                icon: OutlinedIcons.chevron_right;
+                tooltip: "Next media";
+                clicked => {
+                    MainWindowAdapter.mod_details_next_media();
+                }
+            }
+
+            if root.details.media_count > 0 : Rectangle {
+                x: parent.width - self.width - 10px;
+                y: parent.height - self.height - 10px;
+                width: media_idx_lbl.preferred_width + 16px;
+                height: 24px;
+                border_radius: 12px;
+                background: #00000099;
+
+                media_idx_lbl := MaterialText {
+                    text: (root.details.active_media_index + 1) + " / " + root.details.media_count;
+                    style: Typography.label_small;
+                    font_weight: 600;
+                    color: #FFFFFF;
+                    horizontal_alignment: center;
+                    vertical_alignment: center;
+                }
+            }
+        }
+
+        // Action Bar
+        VerticalLayout {
+            spacing: 8px;
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+
+                if root.details.is_installed : FilledButton {
+                    text: "Play";
+                    icon: FilledIcons.play_arrow;
+                    clicked => {
+                        MainWindowAdapter.play_mod(root.details.id);
+                    }
+                }
+
+                if !root.details.is_installed && root.details.files.length > 0 : FilledButton {
+                    text: root.details.is_installing ? "Installing..." : "Install";
+                    icon: OutlinedIcons.download;
+                    enabled: !root.details.is_installing;
+                    clicked => {
+                        MainWindowAdapter.install_mod_file(
+                            root.details.id,
+                            root.details.files[0].download_url,
+                            root.details.files[0].filename,
+                        );
+                    }
+                }
+
+                if root.details.is_installed : TonalButton {
+                    text: "Open Folder";
+                    icon: OutlinedIcons.folder_open;
+                    clicked => {
+                        MainWindowAdapter.open_mod_folder(root.details.id);
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 8px;
+                alignment: start;
+
+                if root.details.is_installed : OutlineButton {
+                    text: "Uninstall";
+                    icon: OutlinedIcons.delete;
+                    clicked => {
+                        MainWindowAdapter.uninstall_mod(root.details.id);
+                    }
+                }
+
+                if root.details.page_url != "" : OutlineButton {
+                    text: "GameBanana";
+                    icon: OutlinedIcons.open_in_new;
+                    clicked => {
+                        MainWindowAdapter.open_external_url(root.details.page_url);
+                    }
+                }
+            }
+        }
+
+        // Install Progress
+        if root.details.is_installing : VerticalLayout {
+            spacing: 6px;
+
+            LinearProgressIndicator {
+                progress: root.details.install_progress;
+            }
+
+            MaterialText {
+                text: root.details.install_status != ""
+                    ? root.details.install_status
+                    : "Installing...";
+                style: Typography.body_small;
+                color: MaterialPalette.primary;
+                overflow: elide;
+            }
+        }
+    }
+}
+
+component ModTabsHeader {
+    in_out property <int> active_tab;
+    in property <int> files_count;
+
+    Rectangle {
+        height: 44px;
+        border_radius: 12px;
+        background: MaterialPalette.surface_container_low;
+        border_width: 1px;
+        border_color: MaterialPalette.outline_variant;
+
+        HorizontalLayout {
+            padding: 4px;
+            spacing: 4px;
+
+            ModalTabButton {
+                text: "Info";
+                selected: root.active_tab == 0;
+                clicked => { root.active_tab = 0; }
+            }
+
+            ModalTabButton {
+                text: root.files_count > 0
+                    ? "Downloads (" + root.files_count + ")"
+                    : "Downloads";
+                selected: root.active_tab == 1;
+                clicked => { root.active_tab = 1; }
+            }
+        }
+    }
+}
+
+component ModTabsBody {
+    in property <int> active_tab;
+    in property <ModDetailsData> details;
+
+    VerticalLayout {
+        spacing: 12px;
+        alignment: start;
+
+        // Info Tab
+        if root.active_tab == 0 : VerticalLayout {
+            spacing: 12px;
+
+            HorizontalLayout {
+                spacing: 8px;
+
+                StatPill {
+                    horizontal-stretch: 1;
+                    icon: OutlinedIcons.visibility;
+                    label: "Views";
+                    value: root.details.views_label != "" ? root.details.views_label : "0";
+                }
+
+                StatPill {
+                    horizontal-stretch: 1;
+                    icon: OutlinedIcons.favorite;
+                    label: "Likes";
+                    value: root.details.likes_label != "" ? root.details.likes_label : "0";
+                }
+
+                StatPill {
+                    horizontal-stretch: 1;
+                    icon: OutlinedIcons.download;
+                    label: "Downloads";
+                    value: root.details.downloads_label != "" ? root.details.downloads_label : "0";
+                }
+            }
+
+            if root.details.date_label != "" : HorizontalLayout {
+                spacing: 6px;
+
+                VerticalLayout {
+                    alignment: center;
+                    Icon {
+                        width: 14px;
+                        source: OutlinedIcons.schedule;
+                        colorize: MaterialPalette.on_surface_variant;
+                    }
+                }
+
+                MaterialText {
+                    text: root.details.date_label;
+                    style: Typography.body_small;
+                    color: MaterialPalette.on_surface_variant;
+                }
+            }
+
+            OutlinedCard {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 6px;
+
+                    MaterialText {
+                        text: "Description";
+                        style: Typography.label_large;
+                        font_weight: 700;
+                        color: MaterialPalette.on_surface;
+                    }
+
+                    MaterialText {
+                        text: root.details.description != ""
+                            ? root.details.description
+                            : (root.details.loading ? "Loading description..." : "No description provided.");
+                        style: Typography.body_medium;
+                        color: MaterialPalette.on_surface_variant;
+                        wrap: word_wrap;
+                    }
+                }
+            }
+
+            if root.details.credits_summary != "" : OutlinedCard {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 6px;
+
+                    MaterialText {
+                        text: "Credits";
+                        style: Typography.label_large;
+                        font_weight: 700;
+                        color: MaterialPalette.on_surface;
+                    }
+
+                    MaterialText {
+                        text: root.details.credits_summary;
+                        style: Typography.body_small;
+                        color: MaterialPalette.on_surface_variant;
+                        wrap: word_wrap;
+                    }
+                }
+            }
+        }
+
+        // Downloads Tab
+        if root.active_tab == 1 : VerticalLayout {
+            spacing: 10px;
+
+            if root.details.files.length == 0 : OutlinedCard {
+                VerticalLayout {
+                    padding: 16px;
+                    spacing: 4px;
+
+                    MaterialText {
+                        text: root.details.loading ? "Loading downloadable files..." : "No downloadable files found";
+                        style: Typography.body_medium;
+                        color: MaterialPalette.on_surface_variant;
+                        horizontal_alignment: center;
+                    }
+                }
+            }
+
+            for mod_file in root.details.files : OutlinedCard {
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+
+                    HorizontalLayout {
+                        spacing: 10px;
+
+                        VerticalLayout {
+                            horizontal-stretch: 1;
+                            spacing: 2px;
+
+                            MaterialText {
+                                text: mod_file.filename;
+                                style: Typography.title_small;
+                                font_weight: 700;
+                                color: MaterialPalette.on_surface;
+                                overflow: elide;
+                            }
+
+                            if mod_file.description != "" : MaterialText {
+                                text: mod_file.description;
+                                style: Typography.body_small;
+                                color: MaterialPalette.on_surface_variant;
+                                wrap: word_wrap;
+                            }
+
+                            MaterialText {
+                                text: mod_file.size_label
+                                    + (mod_file.downloads_label != "" ? " • " + mod_file.downloads_label + " downloads" : "");
+                                style: Typography.label_small;
+                                color: MaterialPalette.on_surface_variant;
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+
+                            TonalButton {
+                                text: mod_file.is_installing ? "Installing..." : "Install";
+                                icon: OutlinedIcons.download;
+                                enabled: !mod_file.is_installing && !root.details.is_installing;
+                                clicked => {
+                                    MainWindowAdapter.install_mod_file(
+                                        root.details.id,
+                                        mod_file.download_url,
+                                        mod_file.filename,
+                                    );
+                                }
+                            }
+                        }
+                    }
+
+                    if mod_file.is_installing : LinearProgressIndicator {
+                        progress: mod_file.progress;
+                    }
+                }
+            }
+        }
+    }
+}
+
+export component ModDetailsModal {
+    property <int> active_tab: 0; // 0 = Info, 1 = Downloads
+    property <ModDetailsData> details: MainWindowAdapter.mod_details;
+    property <bool> is_open: MainWindowAdapter.mod_details.open;
+
+    changed is_open => {
+        if root.is_open {
+            root.active_tab = 0;
+        }
+    }
+
+    function resolve_engine_icon(eid: string) -> image {
+        if eid == "psych" { return EngineIcons.psych; }
+        if eid == "codename" { return EngineIcons.codename; }
+        if eid == "vslice" { return EngineIcons.vslice; }
+        if eid == "pslice" { return EngineIcons.pslice; }
+        if eid == "executable" || eid == "exe" { return EngineIcons.executable; }
+        if eid == "fpsplus" { return EngineIcons.fpsplus; }
+        if eid == "psychonline" { return EngineIcons.psychonline; }
+        return EngineIcons.vslice;
+    }
+
+    width: 100%;
+    height: 100%;
+    visible: root.details.open;
+
+    if root.details.open : Rectangle {
+        width: 100%;
+        height: 100%;
+        background: #00000088;
+
+        FocusScope {
+            x: 0px;
+            width: 0px;
+            key_pressed(event) => {
+                if event.text == Key.Escape {
+                    MainWindowAdapter.close_mod_details();
+                    return accept;
+                }
+                reject
+            }
+        }
+
+        TouchArea {
+            width: 100%;
+            height: 100%;
+
+            clicked => {
+                MainWindowAdapter.close_mod_details();
+            }
+        }
+
+        modal_card := Rectangle {
+            x: (parent.width - self.width) / 2;
+            y: (parent.height - self.height) / 2;
+            width: min(parent.width - 32px, 860px);
+            height: min(parent.height - 32px, 640px);
+            border_radius: 24px;
+            background: MaterialPalette.surface_container;
+            border_width: 1px;
+            border_color: MaterialPalette.outline_variant;
+            clip: true;
+
+            TouchArea {
+                width: 100%;
+                height: 100%;
+            }
+
+            VerticalLayout {
+                width: 100%;
+                height: 100%;
+                padding: 20px;
+                spacing: 14px;
+
+                // Header
+                HorizontalLayout {
+                    vertical-stretch: 0;
+                    spacing: 12px;
+
+                    Rectangle {
+                        width: 44px;
+                        height: 44px;
+                        border_radius: 12px;
+                        background: MaterialPalette.surface_container_high;
+                        border_width: 1px;
+                        border_color: MaterialPalette.outline_variant;
+
+                        Image {
+                            x: (parent.width - self.width) / 2;
+                            y: (parent.height - self.height) / 2;
+                            width: 32px;
+                            height: 32px;
+                            source: root.resolve_engine_icon(root.details.engine_id);
+                            image-fit: contain;
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        alignment: center;
+                        spacing: 2px;
+
+                        HorizontalLayout {
+                            spacing: 8px;
+
+                            MaterialText {
+                                text: root.details.title != "" ? root.details.title : "Mod Details";
+                                style: Typography.title_large;
+                                font_weight: 700;
+                                color: MaterialPalette.on_surface;
+                                overflow: elide;
+                                vertical_alignment: center;
+                            }
+
+                            if root.details.version != "" : VerticalLayout {
+                                alignment: center;
+
+                                Rectangle {
+                                    width: ver_lbl.preferred_width + 14px;
+                                    height: 22px;
+                                    border_radius: 11px;
+                                    background: MaterialPalette.secondary_container;
+
+                                    ver_lbl := MaterialText {
+                                        text: root.details.version;
+                                        style: Typography.label_small;
+                                        font_weight: 700;
+                                        color: MaterialPalette.on_secondary_container;
+                                        horizontal_alignment: center;
+                                        vertical_alignment: center;
+                                    }
+                                }
+                            }
+                        }
+
+                        HorizontalLayout {
+                            spacing: 8px;
+
+                            MaterialText {
+                                text: root.details.author != "" ? "By " + root.details.author : "By Unknown Creator";
+                                style: Typography.body_small;
+                                color: MaterialPalette.on_surface_variant;
+                                overflow: elide;
+                            }
+
+                            if root.details.engine_name != "" : MaterialText {
+                                text: "• " + root.details.engine_name;
+                                style: Typography.body_small;
+                                font_weight: 600;
+                                color: MaterialPalette.primary;
+                            }
+                        }
+                    }
+
+                    HorizontalLayout {
+                        spacing: 4px;
+
+                        VerticalLayout {
+                            alignment: center;
+                            IconButton {
+                                icon: root.details.is_favorite ? FilledIcons.favorite : OutlinedIcons.favorite;
+                                checked: root.details.is_favorite;
+                                tooltip: "Favorite";
+                                clicked => {
+                                    MainWindowAdapter.toggle_mod_favorite(root.details.id);
+                                }
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            IconButton {
+                                icon: root.details.is_bookmarked ? FilledIcons.bookmark : OutlinedIcons.bookmark;
+                                checked: root.details.is_bookmarked;
+                                tooltip: "Bookmark";
+                                clicked => {
+                                    MainWindowAdapter.toggle_mod_bookmark(root.details.id);
+                                }
+                            }
+                        }
+
+                        VerticalLayout {
+                            alignment: center;
+                            IconButton {
+                                icon: OutlinedIcons.close;
+                                tooltip: "Close";
+                                clicked => {
+                                    MainWindowAdapter.close_mod_details();
+                                }
+                            }
+                        }
+                    }
+                }
+
+                HorizontalDivider {}
+
+                // Desktop 2-column split
+                if modal_card.width >= 660px : HorizontalLayout {
+                    vertical-stretch: 1;
+                    spacing: 16px;
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 0px;
+
+                        ModMediaAndActions {
+                            details: root.details;
+                        }
+
+                        Rectangle {
+                            vertical-stretch: 1;
+                        }
+                    }
+
+                    VerticalLayout {
+                        horizontal-stretch: 1;
+                        spacing: 10px;
+
+                        ModTabsHeader {
+                            active_tab <=> root.active_tab;
+                            files_count: root.details.files.length;
+                        }
+
+                        if root.details.loading : LinearProgressIndicator {
+                            indeterminate: true;
+                        }
+
+                        desktop_tab_scroll := ScrollView {
+                            vertical-stretch: 1;
+
+                            VerticalLayout {
+                                width: desktop_tab_scroll.visible_width;
+                                alignment: start;
+
+                                ModTabsBody {
+                                    active_tab: root.active_tab;
+                                    details: root.details;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Compact stacked scrollable layout
+                if modal_card.width < 660px : compact_scroll := ScrollView {
+                    vertical-stretch: 1;
+
+                    VerticalLayout {
+                        width: compact_scroll.visible_width;
+                        spacing: 12px;
+                        alignment: start;
+
+                        ModMediaAndActions {
+                            details: root.details;
+                        }
+
+                        ModTabsHeader {
+                            active_tab <=> root.active_tab;
+                            files_count: root.details.files.length;
+                        }
+
+                        if root.details.loading : LinearProgressIndicator {
+                            indeterminate: true;
+                        }
+
+                        ModTabsBody {
+                            active_tab: root.active_tab;
+                            details: root.details;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

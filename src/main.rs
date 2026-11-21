@@ -22,8 +22,8 @@ fn center_window_on_screen(window: &MainWindow) {
     if screen_w > 0 && screen_h > 0 {
         let slint_win = window.window();
         let scale = slint_win.scale_factor();
-        let win_w = (1080.0 * scale) as i32;
-        let win_h = (700.0 * scale) as i32;
+        let win_w = (1120.0 * scale) as i32;
+        let win_h = (740.0 * scale) as i32;
         let x = ((screen_w - win_w) / 2).max(0);
         let y = ((screen_h - win_h) / 2).max(0);
         slint_win.set_position(slint::PhysicalPosition::new(x, y));
