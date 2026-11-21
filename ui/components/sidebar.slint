@@ -154,6 +154,7 @@ export component DesktopSidebar {
 
         Rectangle {
             width: 92px;
+            vertical-stretch: 0;
             background: MaterialPalette.surface_container_low;
             border-top-right-radius: 16px;
 
@@ -200,24 +201,25 @@ export component DesktopSidebar {
             }
         }
 
-        // Smooth asymmetric curve transition from 92px to 20px
+        // Smooth asymmetric curve transition from 92px to 20px (1:1 viewbox)
         Path {
             width: 92px;
             height: 56px;
+            vertical-stretch: 0;
             viewbox-width: 92;
-            viewbox-height: 64;
+            viewbox-height: 56;
             fill: MaterialPalette.surface_container_low;
 
             MoveTo { x: 92; y: 0; }
             CubicTo {
                 control-1-x: 92;
-                control-1-y: 32;
+                control-1-y: 28;
                 control-2-x: 20;
-                control-2-y: 32;
+                control-2-y: 28;
                 x: 20;
-                y: 64;
+                y: 56;
             }
-            LineTo { x: 0; y: 64; }
+            LineTo { x: 0; y: 56; }
             LineTo { x: 0; y: 0; }
             Close {}
         }
@@ -247,7 +249,8 @@ export component MobileBottomNav {
     callback index_changed(index: int);
     callback settings_clicked();
 
-    min_height: 72px;
+    height: 72px;
+    vertical-stretch: 0;
 
     Rectangle {
         width: 100%;

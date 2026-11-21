@@ -1,9 +1,7 @@
-import { Palette } from "std-widgets.slint";
 import {
     MaterialPalette,
     MaterialWindow,
     NavigationItem,
-    SmallAppBar,
 } from "@material";
 import { AppTab, MainWindowAdapter } from "./adapter.slint";
 import { FilledIcons, OutlinedIcons } from "./icons.slint";
@@ -71,111 +69,89 @@ export component MainWindow inherits MaterialWindow {
         }
     }
 
-    VerticalLayout {
+    if !root.compact_layout : HorizontalLayout {
         x: 0px;
         y: 0px;
         width: 100%;
         height: 100%;
-        SmallAppBar {
-            title: "WeekBox · Rust + Material 3";
-            trailing_buttons: [
-                {
-                    icon: Palette.color_scheme == ColorScheme.light
-                        ? OutlinedIcons.dark_mode
-                        : OutlinedIcons.light_mode,
-                    enabled: true,
-                }
-            ];
 
-            trailing_button_clicked(index) => {
-                if index == 0 {
-                    if Palette.color_scheme == ColorScheme.light {
-                        Palette.color_scheme = ColorScheme.dark;
-                    } else {
-                        Palette.color_scheme = ColorScheme.light;
-                    }
-                }
+        DesktopSidebar {
+            items: root.nav_items;
+            current_index: root.tab_to_index(MainWindowAdapter.active_tab);
+            info_open: MainWindowAdapter.info_open;
+            settings_open: MainWindowAdapter.settings_open;
+
+            index_changed(index) => {
+                root.set_tab_by_index(index);
+            }
+
+            info_clicked => {
+                MainWindowAdapter.open_info();
+            }
+
+            settings_clicked => {
+                MainWindowAdapter.open_settings();
             }
         }
 
-        if !root.compact_layout : HorizontalLayout {
-            vertical-stretch: 1;
-
-            DesktopSidebar {
-                items: root.nav_items;
-                current_index: root.tab_to_index(MainWindowAdapter.active_tab);
-                info_open: MainWindowAdapter.info_open;
-                settings_open: MainWindowAdapter.settings_open;
-
-                index_changed(index) => {
-                    root.set_tab_by_index(index);
-                }
-
-                info_clicked => {
-                    MainWindowAdapter.open_info();
-                }
-
-                settings_clicked => {
-                    MainWindowAdapter.open_settings();
-                }
+        Rectangle {
+            horizontal-stretch: 1;
+            if MainWindowAdapter.active_tab == AppTab.home : HomeView {
+                width: 100%;
+                height: 100%;
             }
+            if MainWindowAdapter.active_tab == AppTab.library : LibraryView {
+                width: 100%;
+                height: 100%;
+            }
+            if MainWindowAdapter.active_tab == AppTab.instances : InstancesView {
+                width: 100%;
+                height: 100%;
+            }
+            if MainWindowAdapter.active_tab == AppTab.news : NewsView {
+                width: 100%;
+                height: 100%;
+            }
+        }
+    }
 
-            Rectangle {
-                horizontal-stretch: 1;
-                if MainWindowAdapter.active_tab == AppTab.home : HomeView {
-                    width: 100%;
-                    height: 100%;
-                }
-                if MainWindowAdapter.active_tab == AppTab.library : LibraryView {
-                    width: 100%;
-                    height: 100%;
-                }
-                if MainWindowAdapter.active_tab == AppTab.instances : InstancesView {
-                    width: 100%;
-                    height: 100%;
-                }
-                if MainWindowAdapter.active_tab == AppTab.news : NewsView {
-                    width: 100%;
-                    height: 100%;
-                }
+    if root.compact_layout : VerticalLayout {
+        x: 0px;
+        y: 0px;
+        width: 100%;
+        height: 100%;
+
+        Rectangle {
+            vertical-stretch: 1;
+            if MainWindowAdapter.active_tab == AppTab.home : HomeView {
+                width: 100%;
+                height: 100%;
+            }
+            if MainWindowAdapter.active_tab == AppTab.library : LibraryView {
+                width: 100%;
+                height: 100%;
+            }
+            if MainWindowAdapter.active_tab == AppTab.instances : InstancesView {
+                width: 100%;
+                height: 100%;
+            }
+            if MainWindowAdapter.active_tab == AppTab.news : NewsView {
+                width: 100%;
+                height: 100%;
             }
         }
 
-        if root.compact_layout : VerticalLayout {
-            vertical-stretch: 1;
+        MobileBottomNav {
+            items: root.nav_items;
+            current_index: root.tab_to_index(MainWindowAdapter.active_tab);
+            settings_open: MainWindowAdapter.settings_open;
 
-            Rectangle {
-                vertical-stretch: 1;
-                if MainWindowAdapter.active_tab == AppTab.home : HomeView {
-                    width: 100%;
-                    height: 100%;
-                }
-                if MainWindowAdapter.active_tab == AppTab.library : LibraryView {
-                    width: 100%;
-                    height: 100%;
-                }
-                if MainWindowAdapter.active_tab == AppTab.instances : InstancesView {
-                    width: 100%;
-                    height: 100%;
-                }
-                if MainWindowAdapter.active_tab == AppTab.news : NewsView {
-                    width: 100%;
-                    height: 100%;
-                }
+            index_changed(index) => {
+                root.set_tab_by_index(index);
             }
 
-            MobileBottomNav {
-                items: root.nav_items;
-                current_index: root.tab_to_index(MainWindowAdapter.active_tab);
-                settings_open: MainWindowAdapter.settings_open;
-
-                index_changed(index) => {
-                    root.set_tab_by_index(index);
-                }
-
-                settings_clicked => {
-                    MainWindowAdapter.open_settings();
-                }
+            settings_clicked => {
+                MainWindowAdapter.open_settings();
             }
         }
     }
