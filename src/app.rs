@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use slint::{ComponentHandle, ModelRc, VecModel};
+use slint::{ComponentHandle, Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, VecModel};
 use tokio::runtime::Handle;
 
 use crate::core::config::AppConfig;
@@ -9,7 +9,9 @@ use crate::core::mods::ModManager;
 use crate::services::gamebanana::GameBananaClient;
 use crate::services::github::GitHubClient;
 use crate::services::news::NewsService;
-use crate::{EngineCardData, MainWindow, MainWindowAdapter, ModCardData, NewsItemData};
+use crate::{
+    EngineCardData, FeaturedModCardData, MainWindow, MainWindowAdapter, ModCardData, NewsItemData,
+};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -34,6 +36,7 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
     };
 
     populate_initial_ui(window, &state);
+    load_featured_mods(window, &state);
 
     let weak = window.as_weak();
     let state_clone = state.clone();
@@ -78,6 +81,16 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
     let weak = window.as_weak();
     window
         .global::<MainWindowAdapter>()
+        .on_featured_mod_clicked(move |id| {
+            if let Some(win) = weak.upgrade() {
+                win.global::<MainWindowAdapter>()
+                    .set_status_message(format!("Mod destacado seleccionado: #{id}").into());
+            }
+        });
+
+    let weak = window.as_weak();
+    window
+        .global::<MainWindowAdapter>()
         .on_open_info(move || {
             if let Some(win) = weak.upgrade() {
                 let adapter = win.global::<MainWindowAdapter>();
@@ -104,6 +117,75 @@ pub fn bind(window: &MainWindow, runtime: Handle, config: AppConfig) {
                 }
             }
         });
+}
+
+fn load_featured_mods(window: &MainWindow, state: &AppState) {
+    let weak = window.as_weak();
+    let state = state.clone();
+
+    state.runtime.spawn(async move {
+        match state.gamebanana.fetch_featured_mods().await {
+            Ok(mods) => {
+                let image_urls: Vec<(usize, String)> = mods
+                    .iter()
+                    .enumerate()
+                    .map(|(i, m)| (i, m.image_url.clone()))
+                    .collect();
+
+                let cards: Vec<FeaturedModCardData> = mods
+                    .into_iter()
+                    .map(|m| FeaturedModCardData {
+                        id: m.id.to_string().into(),
+                        title: m.title.into(),
+                        author: m.author.into(),
+                        engine: m.engine.into(),
+                        badge: m.badge.into(),
+                        cover: Image::default(),
+                        has_cover: false,
+                    })
+                    .collect();
+
+                let weak_ui = weak.clone();
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(win) = weak_ui.upgrade() {
+                        let adapter = win.global::<MainWindowAdapter>();
+                        adapter.set_featured_mods(ModelRc::new(VecModel::from(cards)));
+                        adapter.set_featured_loading(false);
+                    }
+                });
+
+                for (idx, url) in image_urls {
+                    let gb = state.gamebanana.clone();
+                    let weak_img = weak.clone();
+                    state.runtime.spawn(async move {
+                        if let Some((w, h, rgba)) = gb.fetch_cover_rgba(&url).await {
+                            let _ = slint::invoke_from_event_loop(move || {
+                                if let Some(win) = weak_img.upgrade() {
+                                    let model = win.global::<MainWindowAdapter>().get_featured_mods();
+                                    if let Some(mut item) = model.row_data(idx) {
+                                        let buf = SharedPixelBuffer::<Rgba8Pixel>::clone_from_slice(
+                                            &rgba, w, h,
+                                        );
+                                        item.cover = Image::from_rgba8(buf);
+                                        item.has_cover = true;
+                                        model.set_row_data(idx, item);
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+            Err(err) => {
+                tracing::warn!(%err, "No se pudieron cargar los mods destacados de GameBanana");
+                let _ = slint::invoke_from_event_loop(move || {
+                    if let Some(win) = weak.upgrade() {
+                        win.global::<MainWindowAdapter>().set_featured_loading(false);
+                    }
+                });
+            }
+        }
+    });
 }
 
 fn populate_initial_ui(window: &MainWindow, state: &AppState) {

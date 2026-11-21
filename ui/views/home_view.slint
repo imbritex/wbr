@@ -4,70 +4,75 @@ import {
     MaterialPalette,
     MaterialStyleMetrics,
     MaterialText,
+    ScrollView,
     TonalButton,
     Typography,
 } from "@material";
 import { MainWindowAdapter, AppTab } from "../adapter.slint";
+import { FeaturedCarousel } from "../components/featured_carousel.slint";
 
 export component HomeView inherits Rectangle {
     background: MaterialPalette.background;
 
-    VerticalLayout {
-        padding: MaterialStyleMetrics.padding_24;
-        spacing: MaterialStyleMetrics.spacing_16;
-        alignment: start;
+    ScrollView {
+        width: 100%;
+        height: 100%;
 
-        MaterialText {
-            text: "WeekBox (wb-r)";
-            style: Typography.headline_medium;
-            color: MaterialPalette.on_background;
-        }
+        VerticalLayout {
+            padding: MaterialStyleMetrics.padding_24;
+            spacing: MaterialStyleMetrics.spacing_16;
+            alignment: start;
 
-        MaterialText {
-            text: "Base nativa en Rust + Slint Material Design 3";
-            style: Typography.body_large;
-            color: MaterialPalette.on_surface_variant;
-        }
+            FeaturedCarousel {
+                items: MainWindowAdapter.featured_mods;
+                loading: MainWindowAdapter.featured_loading;
+                compact: root.width < 600px;
 
-        ElevatedCard {
-            VerticalLayout {
-                padding: MaterialStyleMetrics.padding_16;
-                spacing: MaterialStyleMetrics.spacing_12;
-
-                MaterialText {
-                    text: "Estado del sistema";
-                    style: Typography.title_medium;
-                    color: MaterialPalette.on_surface;
+                mod_clicked(id) => {
+                    MainWindowAdapter.featured_mod_clicked(id);
                 }
+            }
 
-                MaterialText {
-                    text: "Biblioteca: " + MainWindowAdapter.library_path;
-                    style: Typography.body_medium;
-                    color: MaterialPalette.on_surface_variant;
-                    wrap: word_wrap;
-                }
-
-                MaterialText {
-                    text: "Estado: " + MainWindowAdapter.status_message;
-                    style: Typography.body_medium;
-                    color: MaterialPalette.primary;
-                }
-
-                HorizontalLayout {
+            ElevatedCard {
+                VerticalLayout {
+                    padding: MaterialStyleMetrics.padding_16;
                     spacing: MaterialStyleMetrics.spacing_12;
-                    alignment: start;
 
-                    FilledButton {
-                        text: "Escanear engines";
-                        clicked => {
-                            MainWindowAdapter.refresh_requested();
-                        }
+                    MaterialText {
+                        text: "Estado del sistema";
+                        style: Typography.title_medium;
+                        color: MaterialPalette.on_surface;
                     }
 
-                    TonalButton {
-                        text: "Explorar Biblioteca";
-                        clicked => {
-                            MainWindowAdapter.active_tab = AppTab.library;
+                    MaterialText {
+                        text: "Biblioteca: " + MainWindowAdapter.library_path;
+                        style: Typography.body_medium;
+                        color: MaterialPalette.on_surface_variant;
+                        wrap: word_wrap;
+                    }
+
+                    MaterialText {
+                        text: "Estado: " + MainWindowAdapter.status_message;
+                        style: Typography.body_medium;
+                        color: MaterialPalette.primary;
+                    }
+
+                    HorizontalLayout {
+                        spacing: MaterialStyleMetrics.spacing_12;
+                        alignment: start;
+
+                        FilledButton {
+                            text: "Escanear engines";
+                            clicked => {
+                                MainWindowAdapter.refresh_requested();
+                            }
+                        }
+
+                        TonalButton {
+                            text: "Explorar Biblioteca";
+                            clicked => {
+                                MainWindowAdapter.active_tab = AppTab.library;
+                            }
                         }
                     }
                 }

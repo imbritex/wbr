@@ -1,0 +1,215 @@
+import {
+    IconButton,
+    MaterialPalette,
+    MaterialStyleMetrics,
+    MaterialText,
+    Typography,
+} from "@material";
+import { FeaturedModCardData } from "../adapter.slint";
+import { OutlinedIcons } from "../icons.slint";
+
+export component FeaturedCarousel {
+    in property <[FeaturedModCardData]> items;
+    in property <bool> loading: false;
+    in property <bool> compact: false;
+
+    callback mod_clicked(id: string);
+
+    in_out property <int> active_index: 0;
+
+    property <FeaturedModCardData> current_item: root.items.length > 0 && root.active_index >= 0 && root.active_index < root.items.length
+        ? root.items[root.active_index]
+        : { id: "", title: "", author: "", engine: "", badge: "", cover: OutlinedIcons.home, has_cover: false };
+
+    function next() {
+        if root.items.length > 0 {
+            root.active_index = Math.mod(root.active_index + 1, root.items.length);
+        }
+    }
+
+    function prev() {
+        if root.items.length > 0 {
+            root.active_index = Math.mod(root.active_index - 1 + root.items.length, root.items.length);
+        }
+    }
+
+    auto_timer := Timer {
+        interval: 4500ms;
+        running: root.items.length > 1;
+        triggered => {
+            root.next();
+        }
+    }
+
+    VerticalLayout {
+        spacing: MaterialStyleMetrics.spacing_12;
+
+        HorizontalLayout {
+            alignment: space-between;
+
+            MaterialText {
+                text: "Featured Mods";
+                style: Typography.title_large;
+                color: MaterialPalette.on_background;
+            }
+
+            if root.items.length > 0 : MaterialText {
+                text: (root.active_index + 1) + " / " + root.items.length;
+                style: Typography.label_medium;
+                color: MaterialPalette.on_surface_variant;
+                vertical_alignment: center;
+            }
+        }
+
+        if root.loading && root.items.length == 0 : Rectangle {
+            height: root.compact ? 240px : 340px;
+            border_radius: 28px;
+            background: MaterialPalette.surface_container;
+            border_width: 1px;
+            border_color: MaterialPalette.outline_variant;
+
+            MaterialText {
+                text: "Cargando mods destacados de GameBanana...";
+                style: Typography.body_large;
+                color: MaterialPalette.on_surface_variant;
+                horizontal_alignment: center;
+                vertical_alignment: center;
+            }
+        }
+
+        if root.items.length > 0 : VerticalLayout {
+            spacing: 12px;
+
+            // Material 3 Hero Carousel Card
+            Rectangle {
+                height: root.compact ? 240px : 340px;
+                border_radius: 28px;
+                background: MaterialPalette.surface_container;
+                border_width: 1px;
+                border_color: MaterialPalette.outline_variant;
+                clip: true;
+
+                if root.current_item.has_cover : Image {
+                    width: 100%;
+                    height: 100%;
+                    source: root.current_item.cover;
+                    image-fit: cover;
+                }
+
+                // Bottom dark gradient for readable title/author
+                Rectangle {
+                    width: 100%;
+                    height: 100%;
+                    background: @linear-gradient(180deg, #00000000 0%, #00000077 55%, #000000EE 100%);
+                }
+
+                // Top-left category badge pill
+                if root.current_item.badge != "" : Rectangle {
+                    x: root.compact ? 16px : 24px;
+                    y: root.compact ? 16px : 24px;
+                    width: badge_text.preferred-width + 24px;
+                    height: 30px;
+                    border_radius: 15px;
+                    background: #00000075;
+                    border_width: 1px;
+                    border_color: #FFFFFF22;
+
+                    badge_text := MaterialText {
+                        text: root.current_item.badge;
+                        font_size: 12px;
+                        font_weight: 600;
+                        color: #FFFFFF;
+                        horizontal_alignment: center;
+                        vertical_alignment: center;
+                    }
+                }
+
+                // Bottom-left mod title, author & engine
+                VerticalLayout {
+                    x: 0px;
+                    y: parent.height - self.preferred-height;
+                    width: 100%;
+                    padding: root.compact ? 18px : 28px;
+                    spacing: 4px;
+
+                    MaterialText {
+                        text: root.current_item.title;
+                        font_size: root.compact ? 20px : 28px;
+                        font_weight: 700;
+                        color: #FFFFFF;
+                        overflow: elide;
+                    }
+
+                    MaterialText {
+                        text: root.current_item.engine != ""
+                            ? "By " + root.current_item.author + " · " + root.current_item.engine
+                            : "By " + root.current_item.author;
+                        font_size: root.compact ? 12px : 14px;
+                        font_weight: 500;
+                        color: #E0E0E0;
+                        overflow: elide;
+                    }
+                }
+
+                TouchArea {
+                    clicked => {
+                        root.mod_clicked(root.current_item.id);
+                    }
+                }
+            }
+
+            // Carousel controls & expressive pill indicators
+            HorizontalLayout {
+                alignment: center;
+                spacing: 12px;
+
+                IconButton {
+                    icon: OutlinedIcons.chevron_left;
+                    tooltip: "Previous";
+                    enabled: root.items.length > 1;
+                    clicked => {
+                        root.prev();
+                    }
+                }
+
+                HorizontalLayout {
+                    alignment: center;
+                    spacing: 6px;
+
+                    for item[idx] in root.items : VerticalLayout {
+                        alignment: center;
+
+                        Rectangle {
+                            width: idx == root.active_index ? 36px : 10px;
+                            height: 10px;
+                            border_radius: 5px;
+                            background: idx == root.active_index
+                                ? MaterialPalette.primary
+                                : MaterialPalette.surface_container_highest;
+                            border_width: 1px;
+                            border_color: MaterialPalette.outline_variant;
+
+                            animate width { duration: 300ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                            animate background { duration: 200ms; }
+
+                            TouchArea {
+                                clicked => {
+                                    root.active_index = idx;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                IconButton {
+                    icon: OutlinedIcons.chevron_right;
+                    tooltip: "Next";
+                    enabled: root.items.length > 1;
+                    clicked => {
+                        root.next();
+                    }
+                }
+            }
+        }
+    }
+}

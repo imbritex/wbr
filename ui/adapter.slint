@@ -13,6 +13,16 @@ export struct ModCardData {
     engine: string,
 }
 
+export struct FeaturedModCardData {
+    id: string,
+    title: string,
+    author: string,
+    engine: string,
+    badge: string,
+    cover: image,
+    has_cover: bool,
+}
+
 export struct NewsItemData {
     title: string,
     source: string,
@@ -32,12 +42,15 @@ export global MainWindowAdapter {
     in_out property <string> status_message: "Iniciando...";
     in_out property <[EngineCardData]> engines: [];
     in_out property <[ModCardData]> mods: [];
+    in_out property <[FeaturedModCardData]> featured_mods: [];
+    in_out property <bool> featured_loading: true;
     in_out property <[NewsItemData]> news: [];
     in_out property <bool> info_open: false;
     in_out property <bool> settings_open: false;
 
     callback refresh_requested();
     callback search_mods(query: string);
+    callback featured_mod_clicked(id: string);
     callback open_info();
     callback open_settings();
 }

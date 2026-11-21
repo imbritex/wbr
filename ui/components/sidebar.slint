@@ -18,14 +18,37 @@ component SidebarNavButton {
     in property <string> text;
     in property <bool> selected;
     in property <bool> compact: false;
+    in property <int> anim_kind: 0; // 0: home, 1: library, 2: instances, 3: news
 
     callback clicked();
+
+    property <bool> bouncing: false;
+    property <bool> prev_selected: root.selected;
+
+    changed selected => {
+        if root.selected && !root.prev_selected {
+            root.bouncing = true;
+            bounce_timer.running = true;
+        }
+        root.prev_selected = root.selected;
+    }
+
+    bounce_timer := Timer {
+        interval: 170ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            root.bouncing = false;
+        }
+    }
 
     min_width: root.compact ? 56px : 76px;
     min_height: root.compact ? 52px : 56px;
 
     touch_area := ExtendedTouchArea {
         clicked => {
+            root.bouncing = true;
+            bounce_timer.running = true;
             root.clicked();
         }
 
@@ -36,19 +59,28 @@ component SidebarNavButton {
             HorizontalLayout {
                 alignment: center;
 
-                pill := Rectangle {
+                // Fixed 56x32 slot so the pill can expand expressively without shifting layout
+                Rectangle {
                     width: 56px;
                     height: 32px;
-                    border_radius: 16px;
-                    background: root.selected ? MaterialPalette.secondary_container : transparent;
 
-                    animate background { duration: 150ms; }
+                    pill := Rectangle {
+                        x: (parent.width - self.width) / 2;
+                        y: (parent.height - self.height) / 2;
+                        width: root.selected ? 56px : 24px;
+                        height: 32px;
+                        border_radius: 16px;
+                        background: root.selected ? MaterialPalette.secondary_container : transparent;
+
+                        animate width { duration: 360ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                        animate background { duration: 180ms; }
+                    }
 
                     state_layer := StateLayer {
                         width: 100%;
                         height: 100%;
                         background: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
-                        border_radius: parent.border_radius;
+                        border_radius: 16px;
                         enabled: true;
                         has_focus: touch_area.has_focus;
                         has_hover: touch_area.has_hover;
@@ -57,7 +89,7 @@ component SidebarNavButton {
                         if touch_area.pressed && !root.selected : Ripple {
                             width: parent.width;
                             height: parent.height;
-                            border_radius: parent.border_radius;
+                            border_radius: 16px;
                             pressed_x: touch_area.pressed_x;
                             pressed_y: touch_area.pressed_y;
                             color: MaterialPalette.on_surface;
@@ -65,12 +97,22 @@ component SidebarNavButton {
                     }
 
                     Icon {
+                        property <length> base_size: root.bouncing ? 27px : (touch_area.has_hover && !root.selected ? 25.5px : 24px);
+                        property <length> jump_y: root.bouncing ? (root.anim_kind == 2 ? -5px : -4px) : (touch_area.has_hover && !root.selected ? -1.5px : 0px);
+                        property <angle> tilt: root.bouncing ? (root.anim_kind == 1 ? -10deg : root.anim_kind == 3 ? 6deg : -5deg) : 0deg;
+
                         x: (parent.width - self.width) / 2;
-                        y: (parent.height - self.height) / 2;
-                        width: 24px;
-                        height: 24px;
+                        y: (parent.height - self.height) / 2 + self.jump_y;
+                        width: self.base_size;
+                        height: self.base_size;
+                        transform-rotation: self.tilt;
                         source: root.selected ? root.selected_icon : root.icon;
                         colorize: root.selected ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+
+                        animate y { duration: 320ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                        animate width { duration: 320ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                        animate height { duration: 320ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                        animate transform-rotation { duration: 360ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
                     }
                 }
             }
@@ -82,6 +124,94 @@ component SidebarNavButton {
                 color: root.selected ? MaterialPalette.primary : MaterialPalette.on_surface_variant;
                 horizontal_alignment: center;
                 overflow: elide;
+
+                animate color { duration: 180ms; }
+            }
+        }
+    }
+}
+
+component SidebarActionButton {
+    in property <image> icon;
+    in property <image> active_icon;
+    in property <bool> active: false;
+    in property <bool> spin_on_click: false;
+    in property <string> tooltip;
+
+    callback clicked();
+
+    property <bool> bouncing: false;
+    property <angle> spin_angle: 0deg;
+
+    bounce_timer := Timer {
+        interval: 170ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            root.bouncing = false;
+        }
+    }
+
+    width: 40px;
+    height: 40px;
+
+    touch_area := ExtendedTouchArea {
+        tooltip: root.tooltip;
+
+        clicked => {
+            if root.spin_on_click {
+                root.spin_angle += 90deg;
+            } else {
+                root.bouncing = true;
+                bounce_timer.running = true;
+            }
+            root.clicked();
+        }
+
+        Rectangle {
+            width: 100%;
+            height: 100%;
+            border_radius: 20px;
+            background: root.active ? MaterialPalette.secondary_container : transparent;
+
+            animate background { duration: 180ms; }
+
+            StateLayer {
+                width: 100%;
+                height: 100%;
+                background: root.active ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface;
+                border_radius: 20px;
+                enabled: true;
+                has_focus: touch_area.has_focus;
+                has_hover: touch_area.has_hover;
+                pressed: touch_area.pressed || touch_area.enter_pressed;
+
+                if touch_area.pressed : Ripple {
+                    width: parent.width;
+                    height: parent.height;
+                    border_radius: 20px;
+                    pressed_x: touch_area.pressed_x;
+                    pressed_y: touch_area.pressed_y;
+                    color: MaterialPalette.on_surface;
+                }
+            }
+
+            Icon {
+                property <length> icon_dim: root.bouncing ? 24px : (touch_area.has_hover ? 22px : 20px);
+                property <length> jump_y: root.bouncing ? -3px : 0px;
+
+                x: (parent.width - self.width) / 2;
+                y: (parent.height - self.height) / 2 + self.jump_y;
+                width: self.icon_dim;
+                height: self.icon_dim;
+                transform-rotation: root.spin_on_click ? (touch_area.has_hover && !root.active ? root.spin_angle + 30deg : root.spin_angle) : 0deg;
+                source: root.active ? root.active_icon : root.icon;
+                colorize: root.active ? MaterialPalette.on_secondary_container : MaterialPalette.on_surface_variant;
+
+                animate y { duration: 300ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                animate width { duration: 280ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                animate height { duration: 280ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
+                animate transform-rotation { duration: 500ms; easing: cubic-bezier(0.34, 1.56, 0.64, 1); }
             }
         }
     }
@@ -118,23 +248,26 @@ export component DesktopSidebar {
                 alignment: end;
 
                 VerticalLayout {
-                    width: 38px;
+                    width: 40px;
                     spacing: 12px;
                     alignment: center;
 
-                    IconButton {
-                        icon: root.info_open ? FilledIcons.info : OutlinedIcons.info;
+                    SidebarActionButton {
+                        icon: OutlinedIcons.info;
+                        active_icon: FilledIcons.info;
+                        active: root.info_open;
                         tooltip: "Information";
-                        enabled: true;
                         clicked => {
                             root.info_clicked();
                         }
                     }
 
-                    IconButton {
-                        icon: root.settings_open ? FilledIcons.sidebar_settings : OutlinedIcons.sidebar_settings;
+                    SidebarActionButton {
+                        icon: OutlinedIcons.sidebar_settings;
+                        active_icon: FilledIcons.sidebar_settings;
+                        active: root.settings_open;
+                        spin_on_click: true;
                         tooltip: "Settings";
-                        enabled: true;
                         clicked => {
                             root.settings_clicked();
                         }
@@ -191,6 +324,7 @@ export component DesktopSidebar {
                         selected_icon: item.selected_icon;
                         text: item.text;
                         selected: index == root.current_index;
+                        anim_kind: index;
 
                         clicked => {
                             root.current_index = index;
@@ -274,6 +408,7 @@ export component MobileBottomNav {
                     text: item.text;
                     selected: index == root.current_index;
                     compact: true;
+                    anim_kind: index;
 
                     clicked => {
                         root.current_index = index;
@@ -298,10 +433,12 @@ export component MobileBottomNav {
                     alignment: center;
                     VerticalLayout {
                         alignment: center;
-                        IconButton {
-                            icon: root.settings_open ? FilledIcons.sidebar_settings : OutlinedIcons.sidebar_settings;
+                        SidebarActionButton {
+                            icon: OutlinedIcons.sidebar_settings;
+                            active_icon: FilledIcons.sidebar_settings;
+                            active: root.settings_open;
+                            spin_on_click: true;
                             tooltip: "Settings";
-                            enabled: true;
                             clicked => {
                                 root.settings_clicked();
                             }
